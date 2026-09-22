@@ -31,20 +31,6 @@ document.getElementById("themeToggle")?.addEventListener("click", event => {
   event.currentTarget.textContent = document.body.classList.contains("dark") ? "☀" : "☾";
 });
 
-document.querySelectorAll(".year-tab").forEach((tab, index) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".year-tab").forEach(item => item.classList.remove("active"));
-    tab.classList.add("active");
-    showToast(index < 2
-      ? "This year is available in your current study plan."
-      : "Year " + (index + 1) + " unlocks as you complete your current path.");
-  });
-});
-
-document.getElementById("careerSelect")?.addEventListener("change", event => {
-  showToast("Study path changed to " + event.target.value + ".");
-});
-
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (authToken) headers.Authorization = "Bearer " + authToken;
@@ -55,28 +41,35 @@ async function api(path, options = {}) {
   return body.data ?? body;
 }
 
-const opportunities = [
-  { logo: "NC", tone: "", type: "Internship", title: "Frontend Engineer Intern", company: "Nimbus Cloud Labs", place: "Pune", pay: "₹20,000 / mo", duration: "3 months", match: 89, skills: ["React", "JavaScript", "SQL"], reason: "Strong fit for your web-development path.", branch: "CSE / IT" },
-  { logo: "PH", tone: "purple", type: "Internship", title: "LLM Applications Intern", company: "Prayag Health AI", place: "Hyderabad", pay: "₹44,000 / mo", duration: "6 months", match: 82, skills: ["Python", "AI / ML", "APIs"], reason: "Matches your Python foundation and AI direction.", branch: "AI / Data" },
-  { logo: "AS", tone: "orange", type: "Placement", title: "Software Engineer — Platform", company: "Aeris Systems", place: "Bengaluru", pay: "₹24.8 LPA", duration: "Full-time", match: 76, skills: ["DSA", "Git", "APIs"], reason: "Builds directly on your DSA and backend readiness.", branch: "CSE / IT" },
-  { logo: "SA", tone: "", type: "Internship", title: "Data Analyst Intern", company: "Sangam Analytics", place: "Noida", pay: "₹18,000 / mo", duration: "4 months", match: 78, skills: ["SQL", "Python", "Power BI"], reason: "Your SQL level is a strong starting point for analytics.", branch: "AI / Data" },
-  { logo: "ID", tone: "purple", type: "Internship", title: "Cloud Support Intern", company: "Indus Digital", place: "Remote", pay: "₹22,000 / mo", duration: "3 months", match: 71, skills: ["Cloud", "Git", "APIs"], reason: "A practical route to close your current cloud gap.", branch: "CSE / IT" },
-  { logo: "ME", tone: "orange", type: "Internship", title: "Mechanical Design Intern", company: "Mitra Engineering", place: "Pune", pay: "₹16,000 / mo", duration: "3 months", match: 68, skills: ["AutoCAD", "CAD", "Manufacturing"], reason: "A branch-specific pathway for mechanical engineering learners.", branch: "Mechanical" },
-  { logo: "EL", tone: "", type: "Internship", title: "Embedded Systems Intern", company: "Electra Labs", place: "Bengaluru", pay: "₹21,000 / mo", duration: "4 months", match: 72, skills: ["C", "Microcontrollers", "Embedded"], reason: "Combines programming fundamentals with electronics practice.", branch: "Electronics" },
-  { logo: "PW", tone: "purple", type: "Placement", title: "Electrical Systems Trainee", company: "PowerGrid Works", place: "Lucknow", pay: "₹5.8 LPA", duration: "Full-time", match: 69, skills: ["MATLAB", "Power Systems", "Electrical"], reason: "A structured entry route for electrical engineering skills.", branch: "Electrical" },
-  { logo: "CB", tone: "orange", type: "Internship", title: "Civil Project Intern", company: "CivicBuild India", place: "Lucknow", pay: "₹15,000 / mo", duration: "3 months", match: 66, skills: ["AutoCAD", "Surveying", "Estimation"], reason: "Adds industry exposure to core civil-engineering skills.", branch: "Civil" },
-  { logo: "AI", tone: "", type: "Internship", title: "Machine Learning Intern", company: "Astra Intelligence", place: "Remote", pay: "₹30,000 / mo", duration: "5 months", match: 74, skills: ["Python", "AI / ML", "SQL"], reason: "A next-step role after strengthening your ML fundamentals.", branch: "AI / Data" },
-  { logo: "NX", tone: "purple", type: "Internship", title: "QA Automation Intern", company: "NextWave Tech", place: "Hyderabad", pay: "₹19,000 / mo", duration: "3 months", match: 75, skills: ["JavaScript", "Testing", "Git"], reason: "Uses your JavaScript base while adding test automation.", branch: "CSE / IT" },
-  { logo: "EC", tone: "orange", type: "Internship", title: "IoT Solutions Intern", company: "EdgeCircuit", place: "Ahmedabad", pay: "₹20,000 / mo", duration: "4 months", match: 70, skills: ["C", "IoT", "Sensors"], reason: "Introduces applied embedded and IoT project experience.", branch: "Electronics" }
-];
+let opportunities = [];
+let selectedBranch = localStorage.getItem("skillsetu_branch") || "Computer Science";
+let selectedYear = Number(localStorage.getItem("skillsetu_year") || 1);
 
-const availableSkills = ["JavaScript", "SQL", "React", "Python", "DSA", "Git", "Cloud", "AI / ML", "APIs", "Power BI", "Testing", "C", "MATLAB", "AutoCAD"];
-const currentSkills = new Set(["JavaScript", "SQL", "React", "Python", "DSA", "Git"]);
-const skillAliases = {
-  DSA: ["DSA", "Data Structures", "Algorithms"],
-  "AI / ML": ["AI / ML", "AI", "Machine Learning", "ML"],
-  C: ["C", "Embedded"]
+const branchSkills = {
+  "Computer Science": ["JavaScript","SQL","React","Python","DSA","Git","APIs","Cloud"],
+  "Information Technology": ["Python","SQL","Networks","Linux","Cloud","Git","APIs","Cybersecurity"],
+  "Electronics & Communication": ["C","Digital Electronics","Microcontrollers","Embedded","Signals","Communication","PCB","IoT"],
+  "Mechanical Engineering": ["CAD","AutoCAD","SolidWorks","Manufacturing","Thermodynamics","Materials","CNC","GD&T"],
+  "Electrical Engineering": ["Circuit Theory","MATLAB","Power Systems","Electrical Machines","Power Electronics","PLC","Control Systems"],
+  "Civil Engineering": ["AutoCAD","Surveying","Structural Analysis","RCC","Estimation","Project Management"],
+  "AI & Data Science": ["Python","SQL","Statistics","Pandas","Machine Learning","Deep Learning","Data Visualization","Git"]
 };
+
+const currentSkills = new Set(["JavaScript","SQL","React","Python","DSA","Git"]);
+
+const skillAliases = {
+  DSA:["DSA","Data Structures","Algorithms"],
+  "AI / ML":["AI / ML","AI","Machine Learning","ML"],
+  "Machine Learning":["Machine Learning","AI / ML","ML"],
+  C:["C","Embedded"],
+  "Power Systems":["Power Systems","Electrical"]
+};
+
+function getJobSkills(job) {
+  return (Array.isArray(job.skills) ? job.skills : String(job.skills || "").split(","))
+    .map(skill => skill.trim())
+    .filter(Boolean);
+}
 
 function skillMatches(skill) {
   if (currentSkills.has(skill)) return true;
@@ -84,9 +77,10 @@ function skillMatches(skill) {
 }
 
 function calculateMatch(job) {
-  const matched = job.skills.filter(skillMatches).length;
-  const base = job.skills.length ? Math.round((matched / job.skills.length) * 100) : 0;
-  return Math.max(55, Math.min(97, Math.round(base * 0.7 + job.match * 0.3)));
+  const skills = getJobSkills(job);
+  if (!skills.length) return 0;
+  const matched = skills.filter(skillMatches).length;
+  return Math.round((matched / skills.length) * 100);
 }
 
 function renderSkillMatcher() {
