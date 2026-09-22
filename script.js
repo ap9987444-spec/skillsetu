@@ -1,7 +1,7 @@
 const views = [...document.querySelectorAll(".view")];
 const nav = [...document.querySelectorAll(".nav-item")];
 const toast = document.getElementById("toast");
-const API_BASE = "https://skillsetu-api-production.up.railway.app/api";
+const API_BASE = "https://skillsetu-api-live-production.up.railway.app/api";
 
 let authToken = localStorage.getItem("skillsetu_token") || "";
 let currentUser = null;
