@@ -253,8 +253,8 @@ app.put('/api/skills', requireAuth, async (req, res) => {
     const skill = await query('SELECT id FROM skills WHERE LOWER(name)=LOWER(@name) LIMIT 1', { name });
     if (!skill.rows.length) continue;
     await query(
-      'INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,TRUE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=EXCLUDED.level,verified=TRUE,evidence=EXCLUDED.evidence',
-      { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Selected by student in SkillSetu' }
+      'INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,FALSE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=EXCLUDED.level,verified=FALSE,evidence=EXCLUDED.evidence',
+      { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Claimed by student — verification pending' }
     );
   }
   const result = await query(
@@ -262,6 +262,58 @@ app.put('/api/skills', requireAuth, async (req, res) => {
     { id: userId }
   );
   ok(res, { skills: result.rows });
+});
+
+const verificationBank = {
+  JavaScript: [
+    { q: 'Which keyword declares a block-scoped variable that can be reassigned?', options: ['var', 'let', 'const', 'static'], answer: 1 },
+    { q: 'What does Array.prototype.map() return?', options: ['The original array only', 'A new transformed array', 'A number', 'A boolean'], answer: 1 },
+    { q: 'Which value represents an explicitly missing value in JavaScript?', options: ['undefined', 'NaN', 'false', '0'], answer: 0 }
+  ],
+  Python: [
+    { q: 'Which Python type stores an ordered, mutable collection?', options: ['tuple', 'list', 'set', 'frozenset'], answer: 1 },
+    { q: 'What does len([10, 20, 30]) return?', options: ['2', '3', '30', '0'], answer: 1 },
+    { q: 'Which keyword defines a function?', options: ['func', 'function', 'def', 'lambda'], answer: 2 }
+  ],
+  SQL: [
+    { q: 'Which clause filters rows before grouping?', options: ['HAVING', 'WHERE', 'ORDER BY', 'LIMIT'], answer: 1 },
+    { q: 'Which command retrieves data from a table?', options: ['SELECT', 'PUSH', 'FETCHROW', 'READTABLE'], answer: 0 },
+    { q: 'Which JOIN keeps all rows from the left table?', options: ['INNER JOIN', 'RIGHT JOIN', 'LEFT JOIN', 'CROSS JOIN'], answer: 2 }
+  ],
+  React: [
+    { q: 'Which hook is commonly used for local component state?', options: ['useRoute', 'useState', 'useClass', 'useValue'], answer: 1 },
+    { q: 'React components should return what?', options: ['A database row', 'A UI representation', 'A CSS file', 'A SQL query'], answer: 1 },
+    { q: 'Which prop helps React identify list items?', options: ['id', 'indexOnly', 'key', 'nameOnly'], answer: 2 }
+  ]
+};
+
+app.get('/api/skill-verification/:skill', requireAuth, async (req, res) => {
+  const requested = String(req.params.skill || '').trim();
+  const key = Object.keys(verificationBank).find(name => name.toLowerCase() === requested.toLowerCase());
+  if (!key) return res.status(404).json({ error: 'Verification quiz is not available for this skill yet' });
+  const questions = verificationBank[key].map(({ q, options }) => ({ q, options }));
+  ok(res, { skill: key, questions });
+});
+
+app.post('/api/skill-verification/:skill', requireAuth, async (req, res) => {
+  const requested = String(req.params.skill || '').trim();
+  const key = Object.keys(verificationBank).find(name => name.toLowerCase() === requested.toLowerCase());
+  if (!key) return res.status(404).json({ error: 'Verification quiz is not available for this skill yet' });
+  const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+  const questions = verificationBank[key];
+  const correct = questions.reduce((n, item, i) => n + (Number(answers[i]) === item.answer ? 1 : 0), 0);
+  const passed = correct >= 2;
+  const userId = Number(req.auth.sub);
+  const skill = await query('SELECT id FROM skills WHERE LOWER(name)=LOWER(@name) LIMIT 1', { name: key });
+  if (!skill.rows.length) return res.status(404).json({ error: 'Skill not found' });
+
+  if (passed) {
+    await query(
+      'INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,TRUE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=GREATEST(user_skills.level,EXCLUDED.level),verified=TRUE,evidence=EXCLUDED.evidence',
+      { user_id: userId, skill_id: skill.rows[0].id, level: Math.min(5, Math.max(2, correct + 1)), evidence: 'Passed SkillSetu verification quiz' }
+    );
+  }
+  ok(res, { skill: key, correct, total: questions.length, passed });
 });
 
 app.get('/api/skill-gap', requireAuth, async (req, res) => {
