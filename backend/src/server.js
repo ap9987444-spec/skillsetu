@@ -81,11 +81,14 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 
 app.get('/api/dashboard', requireAuth, async (req, res) => {
   const id = Number(req.auth.sub);
+  const profileResult = await query('SELECT branch,year FROM student_profiles WHERE user_id=@id LIMIT 1', { id });
+  const branch = profileResult.rows[0]?.branch || 'Computer Science';
+  const year = Number(profileResult.rows[0]?.year || 1);
   const [total, done, applications, open] = await Promise.all([
-    query("SELECT COUNT(*)::int AS c FROM study_units WHERE branch='Computer Science' AND year=2"),
+    query('SELECT COUNT(*)::int AS c FROM study_units WHERE branch=@branch AND year=@year', { branch, year }),
     query('SELECT COUNT(*)::int AS c FROM progress WHERE user_id=@id AND completed=TRUE', { id }),
     query('SELECT COUNT(*)::int AS c FROM applications WHERE user_id=@id', { id }),
-    query('SELECT COUNT(*)::int AS c FROM opportunities')
+    query('SELECT COUNT(*)::int AS c FROM opportunities WHERE branch=@branch', { branch })
   ]);
   const totalUnits = total.rows[0].c;
   ok(res, {
@@ -95,9 +98,9 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
   });
 });
 
-app.get('/api/study/units', requireAuth, async (req, res) => {
+app.get('/api/study/units', async (req, res) => {
   const branch = String(req.query.branch || 'Computer Science');
-  const year = Number(req.query.year || 2);
+  const year = Number(req.query.year || 1);
   const result = await query(
     'SELECT * FROM study_units WHERE branch=@branch AND year=@year ORDER BY id',
     { branch, year }
@@ -131,28 +134,34 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 
 app.put('/api/profile', requireAuth, async (req, res) => {
   if (req.auth.role !== 'student') return res.status(403).json({ error: 'Student profile only' });
+  const existing = await query('SELECT * FROM student_profiles WHERE user_id=@id LIMIT 1', { id: Number(req.auth.sub) });
+  const current = existing.rows[0] || {};
   const p = req.body || {};
   await query(
     'INSERT INTO student_profiles(user_id,branch,year,cgpa,career_direction,preferred_location,open_to_opportunities) VALUES(@user_id,@branch,@year,@cgpa,@career_direction,@preferred_location,@open_to_opportunities) ON CONFLICT (user_id) DO UPDATE SET branch=EXCLUDED.branch,year=EXCLUDED.year,cgpa=EXCLUDED.cgpa,career_direction=EXCLUDED.career_direction,preferred_location=EXCLUDED.preferred_location,open_to_opportunities=EXCLUDED.open_to_opportunities',
     {
       user_id: Number(req.auth.sub),
-      branch: p.branch || 'Computer Science',
-      year: Number(p.year || 2),
-      cgpa: p.cgpa == null ? null : Number(p.cgpa),
-      career_direction: p.career_direction || 'Software Engineering',
-      preferred_location: p.preferred_location || 'India · Remote',
-      open_to_opportunities: p.open_to_opportunities !== false
+      branch: p.branch || current.branch || 'Computer Science',
+      year: Number(p.year || current.year || 1),
+      cgpa: p.cgpa === undefined ? current.cgpa : (p.cgpa == null ? null : Number(p.cgpa)),
+      career_direction: p.career_direction || current.career_direction || 'Software Engineering',
+      preferred_location: p.preferred_location || current.preferred_location || 'India · Remote',
+      open_to_opportunities: p.open_to_opportunities === undefined ? (current.open_to_opportunities ?? true) : p.open_to_opportunities !== false
     }
   );
   const result = await query('SELECT * FROM student_profiles WHERE user_id=@id LIMIT 1', { id: Number(req.auth.sub) });
   ok(res, { profile: result.rows[0] });
 });
 
-app.get('/api/opportunities', requireAuth, async (req, res) => {
+app.get('/api/opportunities', async (req, res) => {
+  const branch = String(req.query.branch || '').trim();
   const type = req.query.type;
-  const result = type && ['internship', 'placement'].includes(type)
-    ? await query('SELECT * FROM opportunities WHERE type=@type ORDER BY id DESC', { type })
-    : await query('SELECT * FROM opportunities ORDER BY id DESC');
+  const filters = [];
+  const params = {};
+  if (branch) { filters.push('branch=@branch'); params.branch = branch; }
+  if (type && ['internship', 'placement'].includes(type)) { filters.push('type=@type'); params.type = type; }
+  const where = filters.length ? ' WHERE ' + filters.join(' AND ') : '';
+  const result = await query('SELECT * FROM opportunities' + where + ' ORDER BY id DESC', params);
   ok(res, { opportunities: result.rows });
 });
 
