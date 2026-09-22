@@ -85,7 +85,7 @@ const projectMilestones = [
   {name:"Student skill profile",detail:"Academic record, career direction and project evidence",done:true},
   {name:"Authentication & role-based access",detail:"Student, institute, employer and admin login",done:true},
   {name:"Backend + database + APIs",detail:"Persistent users, materials, skills, opportunities and applications",done:true},
-  {name:"Production deployment & live integrations",detail:"Real data, notifications, secure deployment and final testing",done:false}
+  {name:"Production deployment & live integrations",detail:"Real data, notifications, secure deployment and final testing",done:true}
 ];
 
 function renderProjectProgress(){
