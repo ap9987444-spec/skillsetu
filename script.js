@@ -251,7 +251,7 @@ renderProjectProgress();
         </article>`;
     }).join("");
     host.querySelectorAll(".apply-btn").forEach(b=>b.addEventListener("click",()=>{
-      b.textContent="Application started"; b.disabled=true; showToast("Opportunity saved to your application pipeline.");
+      applyOpportunity(b.closest(".job-card"));
     }));
   }
 
@@ -290,4 +290,160 @@ renderProjectProgress();
   renderMatcher();
   renderOpportunities();
   enhanceOpportunityFilters();
+})();
+
+
+/* Student authentication and persistent application flow. */
+(function(){
+  const authModal=document.getElementById("authModal");
+  const authButton=document.getElementById("authButton");
+  const authClose=document.getElementById("authClose");
+  const authSwitch=document.getElementById("authSwitch");
+  const loginForm=document.getElementById("loginForm");
+  const registerForm=document.getElementById("registerForm");
+  const authTitle=document.getElementById("authTitle");
+  const authSubtitle=document.getElementById("authSubtitle");
+  const authStyle=document.createElement("style");
+
+  authStyle.textContent=`
+    .auth-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .auth-modal.hidden{display:none}
+    .auth-backdrop{position:absolute;inset:0;background:rgba(9,14,24,.55);backdrop-filter:blur(3px)}
+    .auth-card{position:relative;width:min(420px,100%);background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,.22);z-index:1}
+    .auth-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:25px;color:var(--muted);cursor:pointer}
+    .auth-brand{font-weight:900;color:var(--blue);font-size:13px;letter-spacing:.5px}
+    .auth-card h2{margin:7px 0 5px;font-size:24px}
+    .auth-card p{margin:0 0 20px;color:var(--muted);font-size:12px;line-height:1.5}
+    .auth-card form{display:grid;gap:13px}
+    .auth-card label{display:grid;gap:6px;font-size:10px;font-weight:800;color:var(--ink)}
+    .auth-card input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:11px 12px;background:var(--white);color:var(--ink);outline:none}
+    .auth-card input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+    .auth-submit{width:100%;margin-top:3px}
+    .auth-switch{margin:16px auto 0;display:block;border:0;background:transparent;color:var(--blue);font-size:11px;font-weight:800;cursor:pointer}
+    .auth-note{display:block;margin-top:14px;text-align:center;color:var(--muted);line-height:1.4}
+    body.dark .auth-card{background:#111722;border-color:#2b3240}
+  `;
+  document.head.appendChild(authStyle);
+
+  let registerMode=false;
+
+  function openAuth(mode){
+    if(mode==="register") setMode(true); else setMode(false);
+    authModal.classList.remove("hidden");
+  }
+
+  function closeAuth(){ authModal.classList.add("hidden"); }
+
+  function setMode(register){
+    registerMode=register;
+    loginForm.classList.toggle("hidden",register);
+    registerForm.classList.toggle("hidden",!register);
+    authTitle.textContent=register?"Create Student Account":"Student Login";
+    authSubtitle.textContent=register?"Create an account so your profile, applications and messages stay connected.":"Log in with your email to save your profile and applications.";
+    authSwitch.textContent=register?"Already have an account? Login":"New student? Create an account";
+  }
+
+  authButton?.addEventListener("click",()=>{
+    if(authToken && window.skillsetuUser){
+      authToken="";
+      window.skillsetuUser=null;
+      localStorage.removeItem("skillsetu_token");
+      authButton.querySelector("span:last-of-type").textContent="Student Login";
+      showToast("You have been logged out.");
+      return;
+    }
+    openAuth("login");
+  });
+  authClose?.addEventListener("click",closeAuth);
+  authModal?.querySelector("[data-close-auth]")?.addEventListener("click",closeAuth);
+  authSwitch?.addEventListener("click",()=>setMode(!registerMode));
+
+  async function login(event){
+    event.preventDefault();
+    try{
+      const result=await api("/auth/login",{method:"POST",body:JSON.stringify({
+        email:document.getElementById("loginEmail").value,
+        password:document.getElementById("loginPassword").value
+      })});
+      authToken=result.token;
+      window.skillsetuUser=result.user;
+      localStorage.setItem("skillsetu_token",authToken);
+      closeAuth();
+      updateAuthButton();
+      showToast("Welcome back, "+result.user.name+"!");
+    }catch(error){ showToast(error.message); }
+  }
+
+  async function register(event){
+    event.preventDefault();
+    try{
+      const result=await api("/auth/register",{method:"POST",body:JSON.stringify({
+        name:document.getElementById("registerName").value,
+        email:document.getElementById("registerEmail").value,
+        password:document.getElementById("registerPassword").value,
+        role:"student"
+      })});
+      authToken=result.token;
+      window.skillsetuUser=result.user;
+      localStorage.setItem("skillsetu_token",authToken);
+      closeAuth();
+      updateAuthButton();
+      showToast("Student account created successfully.");
+    }catch(error){ showToast(error.message); }
+  }
+
+  loginForm?.addEventListener("submit",login);
+  registerForm?.addEventListener("submit",register);
+
+  function updateAuthButton(){
+    const label=authButton?.querySelector("span:last-of-type");
+    const avatar=authButton?.querySelector(".mini-avatar");
+    if(!label) return;
+    if(authToken && window.skillsetuUser){
+      label.textContent=window.skillsetuUser.name;
+      if(avatar) avatar.textContent=(window.skillsetuUser.name||"ST").slice(0,2).toUpperCase();
+    }else{
+      label.textContent="Student Login";
+      if(avatar) avatar.textContent="ST";
+    }
+  }
+
+  window.applyOpportunity=async function(card){
+    if(!authToken || !window.skillsetuUser){
+      openAuth("login");
+      showToast("Please log in before applying.");
+      return;
+    }
+    const title=card?.querySelector("h3")?.textContent?.trim();
+    if(!title) return;
+    const buttons=card.querySelectorAll(".apply-btn");
+    buttons.forEach(b=>{b.disabled=true;b.textContent="Applying…";});
+    try{
+      const data=await api("/opportunities");
+      const job=data.opportunities.find(item=>item.title===title);
+      if(!job) throw new Error("This opportunity is not available in the database yet.");
+      const result=await api("/applications",{method:"POST",body:JSON.stringify({opportunity_id:job.id})});
+      buttons.forEach(b=>{b.textContent="Applied ✓";});
+      showToast(result.emailSent?"Applied! Confirmation email sent.":"Application saved to your account.");
+    }catch(error){
+      buttons.forEach(b=>{b.disabled=false;b.textContent="View & apply";});
+      showToast(error.message);
+    }
+  };
+
+  async function restoreSession(){
+    if(!authToken){ updateAuthButton(); return; }
+    try{
+      const result=await api("/auth/me");
+      window.skillsetuUser=result.user;
+      updateAuthButton();
+    }catch{
+      authToken="";
+      localStorage.removeItem("skillsetu_token");
+      updateAuthButton();
+    }
+  }
+
+  window.skillsetuAuth={openAuth,closeAuth,restoreSession};
+  restoreSession();
 })();
