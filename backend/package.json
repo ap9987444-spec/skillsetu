@@ -1,9 +1,20 @@
 {
   "name": "skillsetu-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "SkillSetu API server",
   "type": "module",
-  "scripts": {"dev":"node --watch src/server.js","start":"node src/server.js","seed":"node src/seed.js"},
-  "dependencies": {"bcryptjs":"^3.0.2","better-sqlite3":"^11.10.0","cors":"^2.8.5","dotenv":"^17.2.2","express":"^5.1.0","jsonwebtoken":"^9.0.2"}
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mssql": "^11.0.1"
+  }
 }
