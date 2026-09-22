@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   title VARCHAR(200) NOT NULL,
   employer VARCHAR(200) NOT NULL,
+  branch VARCHAR(120),
   location VARCHAR(160),
   type VARCHAR(30) NOT NULL CHECK (type IN ('internship','placement')),
   stipend_or_package VARCHAR(120),
@@ -54,7 +55,9 @@ CREATE TABLE IF NOT EXISTS opportunities (
   description TEXT,
   skills VARCHAR(1000),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+ );
+
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS branch VARCHAR(120);
 
 CREATE TABLE IF NOT EXISTS applications (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -87,4 +90,5 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS ix_study_units_branch_year ON study_units(branch, year);
 CREATE INDEX IF NOT EXISTS ix_opportunities_type ON opportunities(type);
+CREATE INDEX IF NOT EXISTS ix_opportunities_branch ON opportunities(branch);
 CREATE INDEX IF NOT EXISTS ix_notifications_user_created ON notifications(user_id, created_at DESC);
