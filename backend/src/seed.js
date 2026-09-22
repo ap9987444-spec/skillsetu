@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { query, sql, initDb, poolPromise } from './db.js';
+import { query, pool, initDb } from './db.js';
 
 const skills = [
   ['JavaScript','Development','high'],['SQL','Data','high'],['React','Development','medium'],
@@ -31,43 +31,44 @@ await initDb();
 
 for (const [name, category, demand_level] of skills) {
   await query(
-    `IF NOT EXISTS (SELECT 1 FROM dbo.skills WHERE name=@name)
-       INSERT INTO dbo.skills(name,category,demand_level) VALUES(@name,@category,@demand_level)`,
+    'INSERT INTO skills(name,category,demand_level) VALUES(@name,@category,@demand_level) ON CONFLICT (name) DO NOTHING',
     { name, category, demand_level }
   );
 }
 
 for (const [branch, year, title, description, resource_url, resource_type] of units) {
-  await query(
-    `IF NOT EXISTS (SELECT 1 FROM dbo.study_units WHERE branch=@branch AND [year]=@year AND title=@title)
-       INSERT INTO dbo.study_units(branch,[year],title,description,resource_url,resource_type)
-       VALUES(@branch,@year,@title,@description,@resource_url,@resource_type)`,
-    { branch, year, title, description, resource_url, resource_type }
+  const exists = await query(
+    'SELECT id FROM study_units WHERE branch=@branch AND year=@year AND title=@title LIMIT 1',
+    { branch, year, title }
   );
+  if (!exists.rows.length) {
+    await query(
+      'INSERT INTO study_units(branch,year,title,description,resource_url,resource_type) VALUES(@branch,@year,@title,@description,@resource_url,@resource_type)',
+      { branch, year, title, description, resource_url, resource_type }
+    );
+  }
 }
 
 for (const [title, employer, location, type, stipend_or_package, duration, description, skillsText] of opportunities) {
-  await query(
-    `IF NOT EXISTS (SELECT 1 FROM dbo.opportunities WHERE title=@title AND employer=@employer)
-       INSERT INTO dbo.opportunities(title,employer,location,type,stipend_or_package,duration,description,skills)
-       VALUES(@title,@employer,@location,@type,@stipend_or_package,@duration,@description,@skills)`,
-    { title, employer, location, type, stipend_or_package, duration, description, skills: skillsText }
-  );
+  const exists = await query('SELECT id FROM opportunities WHERE title=@title AND employer=@employer LIMIT 1', { title, employer });
+  if (!exists.rows.length) {
+    await query(
+      'INSERT INTO opportunities(title,employer,location,type,stipend_or_package,duration,description,skills) VALUES(@title,@employer,@location,@type,@stipend_or_package,@duration,@description,@skills)',
+      { title, employer, location, type, stipend_or_package, duration, description, skills: skillsText }
+    );
+  }
 }
 
 const demoEmail = 'demo@skillsetu.local';
-const existing = await query('SELECT TOP 1 id FROM dbo.users WHERE email=@email', { email: demoEmail });
-if (!existing.recordset.length) {
+const existing = await query('SELECT id FROM users WHERE email=@email LIMIT 1', { email: demoEmail });
+if (!existing.rows.length) {
   const hash = await bcrypt.hash('SkillSetuDemo123!', 12);
   const created = await query(
-    `INSERT INTO dbo.users(name,email,password_hash,role)
-     OUTPUT INSERTED.id
-     VALUES(@name,@email,@password_hash,'student')`,
+    "INSERT INTO users(name,email,password_hash,role) VALUES(@name,@email,@password_hash,'student') RETURNING id",
     { name: 'Demo Student', email: demoEmail, password_hash: hash }
   );
-  await query('INSERT INTO dbo.student_profiles(user_id) VALUES(@id)', { id: created.recordset[0].id });
+  await query('INSERT INTO student_profiles(user_id) VALUES(@id) ON CONFLICT (user_id) DO NOTHING', { id: created.rows[0].id });
 }
 
-console.log('SkillSetu MSSQL database seeded successfully.');
-const pool = await poolPromise;
-await pool.close();
+console.log('SkillSetu PostgreSQL database seeded successfully.');
+await pool.end();
