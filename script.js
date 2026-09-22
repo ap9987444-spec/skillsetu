@@ -52,6 +52,29 @@ document.getElementById("careerSelect")?.addEventListener("change",e=>{
 
 showView("overview");
 
+const API_BASE = window.SKILLSETU_API_BASE || 'http://localhost:4000/api';
+let authToken = localStorage.getItem('skillsetu_token') || '';
+
+async function api(path, options={}) {
+  const headers = {'Content-Type':'application/json', ...(options.headers||{})};
+  if (authToken) headers.Authorization = 'Bearer ' + authToken;
+  const res = await fetch(API_BASE + path, {...options, headers});
+  const body = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(body.error || 'Request failed');
+  return body.data ?? body;
+}
+
+async function connectBackend() {
+  if (!authToken) return;
+  try {
+    await api('/auth/me');
+    showToast('Backend connected');
+  } catch {
+    authToken = '';
+    localStorage.removeItem('skillsetu_token');
+  }
+}
+
 const projectMilestones = [
   {name:"Reference-style responsive UI",detail:"Dashboard shell, navigation, cards and responsive styling",done:true},
   {name:"Student dashboard",detail:"Overview, study progress, skills and opportunity summary",done:true},
@@ -60,8 +83,8 @@ const projectMilestones = [
   {name:"Internship & placement opportunities",detail:"Matched roles, employer information and application actions",done:true},
   {name:"Application pipeline",detail:"Saved, applied, screening, interview and offer tracking",done:true},
   {name:"Student skill profile",detail:"Academic record, career direction and project evidence",done:true},
-  {name:"Authentication & role-based access",detail:"Student, institute, employer and admin login",done:false},
-  {name:"Backend + database + APIs",detail:"Persistent users, materials, skills, opportunities and applications",done:false},
+  {name:"Authentication & role-based access",detail:"Student, institute, employer and admin login",done:true},
+  {name:"Backend + database + APIs",detail:"Persistent users, materials, skills, opportunities and applications",done:true},
   {name:"Production deployment & live integrations",detail:"Real data, notifications, secure deployment and final testing",done:false}
 ];
 
