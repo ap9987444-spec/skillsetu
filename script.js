@@ -454,6 +454,71 @@ async function loadSavedSkills() {
   } catch {}
 }
 
+function setupSkillVerification() {
+  const skillSelect = document.getElementById("verificationSkill");
+  const startBtn = document.getElementById("startVerificationBtn");
+  const result = document.getElementById("verificationResult");
+  if (!skillSelect || !startBtn || !result) return;
+
+  startBtn.addEventListener("click", async () => {
+    if (!authToken || !currentUser) {
+      window.skillsetuAuth?.openAuth("login");
+      showToast("Please log in before verifying a skill.");
+      return;
+    }
+    const skill = skillSelect.value;
+    if (!skill) {
+      showToast("Choose a skill first.");
+      return;
+    }
+    startBtn.disabled = true;
+    startBtn.textContent = "Loading…";
+    try {
+      const data = await api("/skill-verification/" + encodeURIComponent(skill));
+      result.innerHTML = '<div class="verification-quiz"><h3>Knowledge check: ' + data.skill + '</h3>' +
+        data.questions.map((q, i) => '<fieldset><legend>' + (i + 1) + '. ' + q.q + '</legend>' +
+          q.options.map((option, j) => '<label><input type="radio" name="verify-' + i + '" value="' + j + '"> ' + option + '</label>').join('') +
+        '</fieldset>').join('') +
+        '<button class="primary-btn" id="submitVerificationBtn" type="button">Submit answers</button></div>';
+
+      document.getElementById("submitVerificationBtn").addEventListener("click", async () => {
+        const answers = data.questions.map((_, i) => {
+          const checked = document.querySelector('input[name="verify-' + i + '"]:checked');
+          return checked ? Number(checked.value) : -1;
+        });
+        if (answers.includes(-1)) {
+          showToast("Answer all questions before submitting.");
+          return;
+        }
+        const submit = document.getElementById("submitVerificationBtn");
+        submit.disabled = true;
+        try {
+          const checkedResult = await api("/skill-verification/" + encodeURIComponent(skill), {
+            method: "POST",
+            body: JSON.stringify({ answers })
+          });
+          result.insertAdjacentHTML("beforeend",
+            '<div class="verification-outcome ' + (checkedResult.passed ? "passed" : "failed") + '">' +
+            (checkedResult.passed
+              ? "✓ Skill verified — " + checkedResult.correct + "/" + checkedResult.total + " correct."
+              : "Verification not passed — " + checkedResult.correct + "/" + checkedResult.total + ". You can try again after studying.") +
+            '</div>'
+          );
+          await loadSavedSkills();
+        } catch (error) {
+          showToast(error.message);
+          submit.disabled = false;
+        }
+      });
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      startBtn.disabled = false;
+      startBtn.textContent = "Start verification";
+    }
+  });
+}
+
 function setupResume() {
   const form = document.getElementById("resumeForm");
   const fileInput = document.getElementById("resumeFile");
@@ -721,6 +786,7 @@ async function restoreSession() {
   localStorage.setItem("skillsetu_year", String(selectedYear));
   updateAuthButton();
   refreshSkillPicker();
+  setupSkillVerification();
   setupResume();
   setupProfileEditor();
   await loadSavedSkills();
