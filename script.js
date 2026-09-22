@@ -487,21 +487,46 @@ async function loadStudyUnits() {
 }
 
 async function changeBranch(branch) {
+  if (!branchSkills[branch]) return;
   selectedBranch = branch;
   localStorage.setItem("skillsetu_branch", selectedBranch);
   refreshSkillPicker();
   updateBranchUI();
 
+  const select = document.getElementById("careerSelect");
+  if (select && select.value !== selectedBranch) select.value = selectedBranch;
+
   if (authToken && currentUser) {
     try {
       await api("/profile", { method: "PUT", body: JSON.stringify({ branch: selectedBranch }) });
     } catch {
-      showToast("Branch changed for this session.");
+      showToast("Branch changed on this device, but profile sync failed.");
+    }
+  }
+
+  await Promise.all([loadStudyUnits(), loadOpportunities()]);
+}
+
+async function changeYear(year) {
+  const numericYear = Number(year);
+  if (!Number.isInteger(numericYear) || numericYear < 1 || numericYear > 4) return;
+
+  selectedYear = numericYear;
+  localStorage.setItem("skillsetu_year", String(selectedYear));
+  updateBranchUI();
+  document.querySelectorAll("#yearTabs .year-tab").forEach(tab => {
+    tab.classList.toggle("active", Number(tab.dataset.year) === selectedYear);
+  });
+
+  if (authToken && currentUser) {
+    try {
+      await api("/profile", { method: "PUT", body: JSON.stringify({ year: selectedYear }) });
+    } catch {
+      showToast("Year changed on this device, but profile sync failed.");
     }
   }
 
   await loadStudyUnits();
-  await loadOpportunities();
 }
 
 async function restoreSession() {
@@ -531,6 +556,17 @@ async function restoreSession() {
 }
 
 (function initialize() {
+  const careerSelect = document.getElementById("careerSelect");
+  if (careerSelect) {
+    careerSelect.addEventListener("change", event => {
+      changeBranch(event.target.value);
+    });
+  }
+
+  document.querySelectorAll("#yearTabs .year-tab").forEach(tab => {
+    tab.addEventListener("click", () => changeYear(tab.dataset.year));
+  });
+
   showView("overview");
   renderSkillMatcher();
   renderOpportunities();
