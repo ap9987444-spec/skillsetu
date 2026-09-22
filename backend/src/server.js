@@ -1,4 +1,7 @@
 import express from 'express';
+import multer from 'multer';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
@@ -15,6 +18,7 @@ const origins = process.env.CLIENT_ORIGIN
 
 app.use(cors({ origin: origins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const ok = (res, data) => res.json({ data });
 
@@ -152,6 +156,143 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   const result = await query('SELECT * FROM student_profiles WHERE user_id=@id LIMIT 1', { id: Number(req.auth.sub) });
   ok(res, { profile: result.rows[0] });
 });
+
+
+async function extractResumeText(file) {
+  if (!file) throw new Error('Resume file is required');
+  const name = String(file.originalname || '').toLowerCase();
+  if (file.mimetype === 'application/pdf' || name.endsWith('.pdf')) {
+    const parsed = await pdfParse(file.buffer);
+    return String(parsed.text || '').trim();
+  }
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || name.endsWith('.docx')) {
+    const parsed = await mammoth.extractRawText({ buffer: file.buffer });
+    return String(parsed.value || '').trim();
+  }
+  if (file.mimetype === 'text/plain' || name.endsWith('.txt')) {
+    return file.buffer.toString('utf8').trim();
+  }
+  throw new Error('Supported resume formats: PDF, DOCX and TXT');
+}
+
+function scoreResume(text, skills) {
+  const lower = String(text || '').toLowerCase();
+  const sectionWords = ['education', 'experience', 'projects', 'skills', 'certification', 'summary'];
+  const sections = sectionWords.filter(word => lower.includes(word)).length;
+  const foundSkills = skills.filter(s => lower.includes(String(s.name).toLowerCase()));
+  const skillPoints = Math.min(60, foundSkills.length * 7);
+  const sectionPoints = sections * 5;
+  const lengthPoints = lower.length >= 600 ? 10 : lower.length >= 250 ? 5 : 0;
+  return { score: Math.min(100, skillPoints + sectionPoints + lengthPoints), foundSkills };
+}
+
+app.post('/api/resume', requireAuth, upload.single('resume'), async (req, res) => {
+  try {
+    if (req.auth.role !== 'student') return res.status(403).json({ error: 'Student resume only' });
+    const text = await extractResumeText(req.file);
+    if (!text) return res.status(400).json({ error: 'Could not extract readable text from the resume' });
+    const skillsResult = await query('SELECT id,name FROM skills ORDER BY name');
+    const { score, foundSkills } = scoreResume(text, skillsResult.rows);
+    await query('DELETE FROM resumes WHERE user_id=@user_id', { user_id: Number(req.auth.sub) });
+    const saved = await query(
+      'INSERT INTO resumes(user_id,file_name,mime_type,file_data,extracted_text,extracted_skills,resume_score) VALUES(@user_id,@file_name,@mime_type,@file_data,@extracted_text,@extracted_skills,@resume_score) RETURNING id,file_name,mime_type,extracted_skills,resume_score,created_at,updated_at',
+      {
+        user_id: Number(req.auth.sub),
+        file_name: String(req.file.originalname || 'resume'),
+        mime_type: String(req.file.mimetype || 'application/octet-stream'),
+        file_data: req.file.buffer,
+        extracted_text: text,
+        extracted_skills: foundSkills.map(s => s.name).join(', '),
+        resume_score: score
+      }
+    );
+    ok(res, {
+      resume: saved.rows[0],
+      extracted_skills: foundSkills.map(s => s.name),
+      resume_score: score,
+      text_preview: text.slice(0, 700)
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: e.message || 'Resume upload failed' });
+  }
+});
+
+app.get('/api/resume', requireAuth, async (req, res) => {
+  const result = await query(
+    'SELECT id,file_name,mime_type,extracted_skills,resume_score,created_at,updated_at FROM resumes WHERE user_id=@id ORDER BY updated_at DESC LIMIT 1',
+    { id: Number(req.auth.sub) }
+  );
+  ok(res, { resume: result.rows[0] || null });
+});
+
+app.get('/api/resume/file', requireAuth, async (req, res) => {
+  const result = await query(
+    'SELECT file_name,mime_type,file_data FROM resumes WHERE user_id=@id ORDER BY updated_at DESC LIMIT 1',
+    { id: Number(req.auth.sub) }
+  );
+  const resume = result.rows[0];
+  if (!resume) return res.status(404).json({ error: 'Resume not found' });
+  res.setHeader('Content-Type', resume.mime_type);
+  res.setHeader('Content-Disposition', 'inline; filename="' + String(resume.file_name).replace(/["\\]/g, '') + '"');
+  res.send(resume.file_data);
+});
+
+app.delete('/api/resume', requireAuth, async (req, res) => {
+  await query('DELETE FROM resumes WHERE user_id=@id', { id: Number(req.auth.sub) });
+  ok(res, { deleted: true });
+});
+
+app.put('/api/skills', requireAuth, async (req, res) => {
+  const items = Array.isArray(req.body?.skills) ? req.body.skills : [];
+  const userId = Number(req.auth.sub);
+  for (const item of items) {
+    const name = String(item?.name || '').trim();
+    const level = Math.max(0, Math.min(5, Number(item?.level || 0)));
+    if (!name) continue;
+    const skill = await query('SELECT id FROM skills WHERE LOWER(name)=LOWER(@name) LIMIT 1', { name });
+    if (!skill.rows.length) continue;
+    await query(
+      'INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,TRUE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=EXCLUDED.level,verified=TRUE,evidence=EXCLUDED.evidence',
+      { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Selected by student in SkillSetu' }
+    );
+  }
+  const result = await query(
+    'SELECT s.id,s.name,COALESCE(us.level,0) AS level,COALESCE(us.verified,FALSE) AS verified FROM skills s LEFT JOIN user_skills us ON us.skill_id=s.id AND us.user_id=@id ORDER BY s.name',
+    { id: userId }
+  );
+  ok(res, { skills: result.rows });
+});
+
+app.get('/api/skill-gap', requireAuth, async (req, res) => {
+  const opportunityId = Number(req.query.opportunity_id || 0);
+  const userId = Number(req.auth.sub);
+  let job;
+  if (opportunityId) {
+    const r = await query('SELECT * FROM opportunities WHERE id=@id LIMIT 1', { id: opportunityId });
+    job = r.rows[0];
+  }
+  if (!job) {
+    const profile = await query('SELECT branch FROM student_profiles WHERE user_id=@id LIMIT 1', { id: userId });
+    const branch = profile.rows[0]?.branch || 'Computer Science';
+    const r = await query('SELECT * FROM opportunities WHERE branch=@branch ORDER BY id DESC LIMIT 1', { branch });
+    job = r.rows[0];
+  }
+  if (!job) return ok(res, { match: 0, matched: [], missing: [], opportunity: null });
+  const skills = getSkillList(job.skills);
+  const userSkills = await query(
+    'SELECT s.name,us.level FROM user_skills us JOIN skills s ON s.id=us.skill_id WHERE us.user_id=@id',
+    { id: userId }
+  );
+  const known = new Set(userSkills.rows.map(s => String(s.name).toLowerCase()));
+  const matched = skills.filter(s => known.has(s.toLowerCase()));
+  const missing = skills.filter(s => !known.has(s.toLowerCase()));
+  ok(res, { match: skills.length ? Math.round(matched.length / skills.length * 100) : 0, matched, missing, opportunity: job });
+});
+
+function getSkillList(value) {
+  return (Array.isArray(value) ? value : String(value || '').split(',')).map(s => String(s).trim()).filter(Boolean);
+}
 
 app.get('/api/opportunities', async (req, res) => {
   const branch = String(req.query.branch || '').trim();
