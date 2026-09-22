@@ -86,13 +86,12 @@ function calculateMatch(job) {
 function renderSkillMatcher() {
   const host = document.getElementById("skills");
   if (!host || document.getElementById("skillMatcher")) return;
-
   const panel = document.createElement("section");
   panel.className = "panel skill-matcher";
   panel.id = "skillMatcher";
   panel.innerHTML = `
     <div class="panel-head">
-      <div><h2>Smart skill matching</h2><p>Select your current skills to see matching opportunities and the next skill gap.</p></div>
+      <div><h2>Smart skill matching</h2><p>Choose skills relevant to your selected branch.</p></div>
       <span class="status-pill">Live</span>
     </div>
     <div class="matcher-body">
@@ -100,13 +99,17 @@ function renderSkillMatcher() {
         <div><span class="matcher-label">YOUR CURRENT SKILLS</span><div class="skill-picker" id="skillPicker"></div></div>
         <div class="matcher-result" id="matcherResult"></div>
       </div>
-      <div class="recommendation-note"><strong>How it works:</strong> SkillSetu compares your selected skills with role requirements and calculates a readiness match.</div>
+      <div class="recommendation-note"><strong>How it works:</strong> SkillSetu compares your skills with branch-specific opportunity requirements.</div>
     </div>`;
-
   host.insertBefore(panel, host.querySelector(".two-col"));
-  const picker = panel.querySelector("#skillPicker");
+  refreshSkillPicker();
+}
 
-  availableSkills.forEach(skill => {
+function refreshSkillPicker() {
+  const picker = document.getElementById("skillPicker");
+  if (!picker) return;
+  picker.innerHTML = "";
+  (branchSkills[selectedBranch] || branchSkills["Computer Science"]).forEach(skill => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "skill-choice" + (currentSkills.has(skill) ? " selected" : "");
@@ -116,48 +119,58 @@ function renderSkillMatcher() {
       button.classList.toggle("selected", currentSkills.has(skill));
       updateMatcher();
       renderOpportunities();
+      applyOpportunityFilters();
     });
     picker.appendChild(button);
   });
-
-  updateMatcher();
 }
 
 function updateMatcher() {
   const result = document.getElementById("matcherResult");
   if (!result) return;
+  if (!opportunities.length) {
+    result.innerHTML = "<div class=\"match-next\">No opportunities are available for this branch yet.</div>";
+    return;
+  }
 
-  const ranked = opportunities.map(job => ({ ...job, score: calculateMatch(job) })).sort((a, b) => b.score - a.score);
+  const ranked = opportunities.map(job => ({ ...job, score: calculateMatch(job), skills: getJobSkills(job) }))
+    .sort((a, b) => b.score - a.score);
   const top = ranked[0];
   const matched = top.skills.filter(skillMatches);
   const missing = top.skills.filter(skill => !skillMatches(skill));
 
   result.innerHTML = `
-    <div class="matcher-score"><div><span>BEST CURRENT MATCH</span><strong>${top.score}%</strong></div><span>${top.title}</span></div>
-    <div class="match-next"><strong>Matched skills:</strong> ${matched.length ? matched.join(" · ") : "Add a skill to begin"}</div>
+    <div class="matcher-score"><div><span>BEST BRANCH MATCH</span><strong>${top.score}%</strong></div><span>${top.title}</span></div>
+    <div class="match-next"><strong>Matched skills:</strong> ${matched.length ? matched.join(" · ") : "Add a branch skill"}</div>
     <div class="gap-chips">${(missing.length ? missing : ["No immediate gap"]).map(skill => `<span class="gap-chip">${missing.length ? "Missing: " : ""}${skill}</span>`).join("")}</div>
-    <div class="match-next"><strong>Next step:</strong> Learn ${missing[0] || "advanced skills"} to unlock more relevant roles.</div>`;
+    <div class="match-next"><strong>Next step:</strong> ${missing.length ? "Build " + missing[0] + "." : "Keep strengthening your core skills."}</div>`;
 }
 
 function renderOpportunities() {
   const host = document.querySelector("#opportunities .opportunity-cards");
   if (!host) return;
+  if (!opportunities.length) {
+    host.innerHTML = `<div class="empty-state">No opportunities are available for ${selectedBranch} yet.</div>`;
+    return;
+  }
 
   host.innerHTML = opportunities.map(job => {
+    const skills = getJobSkills(job);
     const score = calculateMatch(job);
-    const points = job.skills.filter(skillMatches).slice(0, 3);
-    const gaps = job.skills.filter(skill => !skillMatches(skill)).slice(0, 2);
+    const points = skills.filter(skillMatches).slice(0, 3);
+    const gaps = skills.filter(skill => !skillMatches(skill)).slice(0, 2);
+    const initials = String(job.employer || "SK").split(/\s+/).map(word => word[0]).join("").slice(0,2).toUpperCase();
 
     return `
-      <article class="job-card" data-branch="${job.branch}" data-score="${score}">
-        <div class="job-top"><span class="company-logo ${job.tone}">${job.logo}</span><span class="tag">${job.type}</span></div>
+      <article class="job-card" data-id="${job.id}" data-branch="${job.branch}" data-score="${score}">
+        <div class="job-top"><span class="company-logo">${initials}</span><span class="tag">${job.type === "placement" ? "Placement" : "Internship"}</span></div>
         <h3>${job.title}</h3>
-        <p>${job.company} · ${job.place}</p>
-        <div class="job-meta"><span>${job.pay}</span><span>${job.duration}</span><strong>${score}% match</strong></div>
-        <div class="skill-tags">${job.skills.map(skill => `<span>${skill}</span>`).join("")}</div>
-        <div class="why-match"><strong>Why recommended?</strong><p>${job.reason}</p><div class="match-points">
+        <p>${job.employer} · ${job.location || "India"}</p>
+        <div class="job-meta"><span>${job.stipend_or_package || "Details inside"}</span><span>${job.duration || ""}</span><strong>${score}% match</strong></div>
+        <div class="skill-tags">${skills.map(skill => `<span>${skill}</span>`).join("")}</div>
+        <div class="why-match"><strong>Why recommended?</strong><p>${job.description || "Relevant to your selected branch."}</p><div class="match-points">
           ${points.map(skill => `<span>✓ ${skill}</span>`).join("")}
-          ${gaps.slice(0, 1).map(skill => `<span style="background:var(--orange-soft);color:var(--orange)">Gap: ${skill}</span>`).join("")}
+          ${gaps.slice(0,1).map(skill => `<span style="background:var(--orange-soft);color:var(--orange)">Gap: ${skill}</span>`).join("")}
         </div></div>
         <button class="primary-btn apply-btn" type="button">View & apply</button>
       </article>`;
@@ -168,45 +181,57 @@ function renderOpportunities() {
   });
 }
 
+async function loadOpportunities() {
+  try {
+    const data = await api("/opportunities?branch=" + encodeURIComponent(selectedBranch));
+    opportunities = data.opportunities || [];
+    const note = document.getElementById("opportunityBranchNote");
+    if (note) note.textContent = "Showing internships and placements for " + selectedBranch + ".";
+    renderOpportunities();
+    updateMatcher();
+    applyOpportunityFilters();
+  } catch {
+    opportunities = [];
+    renderOpportunities();
+    showToast("Could not load opportunities for this branch.");
+  }
+}
+
+let highOnly = false;
+let activeOpportunityFilter = "All";
+
+function applyOpportunityFilters() {
+  document.querySelectorAll("#opportunities .job-card").forEach(card => {
+    const score = Number(card.dataset.score || 0);
+    const type = card.querySelector(".tag")?.textContent?.trim() || "";
+    let visible = true;
+    if (activeOpportunityFilter === "Internships") visible = type === "Internship";
+    else if (activeOpportunityFilter === "Placements") visible = type === "Placement";
+    else if (activeOpportunityFilter === "Remote") visible = card.textContent.includes("Remote");
+    if (highOnly && score < 75) visible = false;
+    card.style.display = visible ? "" : "none";
+  });
+}
+
 function setupOpportunityFilters() {
   const bar = document.querySelector("#opportunities .filter-bar");
   const filterButton = document.getElementById("filterBtn");
   if (!bar || !filterButton) return;
 
-  let highOnly = false;
-
-  const applyFilters = activeLabel => {
-    document.querySelectorAll("#opportunities .job-card").forEach(card => {
-      const branch = card.dataset.branch || "";
-      const score = Number(card.dataset.score || 0);
-      const type = card.querySelector(".tag")?.textContent?.trim() || "";
-      let visible = true;
-
-      if (activeLabel === "Internships") visible = type === "Internship";
-      else if (activeLabel === "Placements") visible = type === "Placement";
-      else if (activeLabel === "Remote") visible = card.textContent.includes("Remote");
-      else if (activeLabel === "AI / Data") visible = branch === "AI / Data";
-      else if (activeLabel === "Software") visible = branch === "CSE / IT";
-
-      if (highOnly && score < 75) visible = false;
-      card.style.display = visible ? "" : "none";
-    });
-  };
-
   bar.querySelectorAll(".filter").forEach(filter => {
-    filter.addEventListener("click", () => {
+    filter.onclick = () => {
       bar.querySelectorAll(".filter").forEach(item => item.classList.remove("active"));
       filter.classList.add("active");
-      applyFilters(filter.textContent.trim());
-    });
+      activeOpportunityFilter = filter.textContent.trim();
+      applyOpportunityFilters();
+    };
   });
 
-  filterButton.addEventListener("click", () => {
+  filterButton.onclick = () => {
     highOnly = !highOnly;
-    applyFilters(bar.querySelector(".filter.active")?.textContent?.trim() || "All");
+    applyOpportunityFilters();
     filterButton.textContent = highOnly ? "Showing 75%+ matches" : "Show high-match only";
-    showToast(highOnly ? "Showing roles with 75%+ readiness match." : "Showing all opportunities.");
-  });
+  };
 }
 
 async function applyOpportunity(card, button) {
@@ -216,22 +241,16 @@ async function applyOpportunity(card, button) {
     return;
   }
 
-  const title = card?.querySelector("h3")?.textContent?.trim();
-  if (!title) return;
-
+  const id = Number(card?.dataset.id);
+  if (!id) return;
   button.disabled = true;
   button.textContent = "Applying…";
 
   try {
-    const data = await api("/opportunities");
-    const job = data.opportunities?.find(item => item.title === title);
-    if (!job) throw new Error("This opportunity is not available in the database yet.");
-
     const result = await api("/applications", {
       method: "POST",
-      body: JSON.stringify({ opportunity_id: job.id })
+      body: JSON.stringify({ opportunity_id: id })
     });
-
     button.textContent = "Applied ✓";
     showToast(result.emailSent ? "Applied! Confirmation email sent." : "Application saved to your account.");
     await loadApplications();
@@ -406,25 +425,86 @@ function updateAuthButton() {
   window.skillsetuAuth = { openAuth, closeAuth };
 })();
 
-async function restoreSession() {
-  updateAuthButton();
-  if (!authToken) {
-    loadApplications();
-    return;
-  }
+async function loadStudyUnits() {
+  const list = document.getElementById("studyUnitsList");
+  const resources = document.getElementById("studyResourcesList");
+  const status = document.getElementById("studyStatus");
+  const title = document.getElementById("careerTitle");
+  const description = document.getElementById("careerDescription");
+  const count = document.getElementById("studyCount");
+  if (!list || !resources) return;
+
+  document.querySelectorAll("#yearTabs .year-tab").forEach(tab => tab.classList.toggle("active", Number(tab.dataset.year) === selectedYear));
+  if (title) title.textContent = selectedBranch + " · Year " + selectedYear;
+  if (description) description.textContent = "Focused core topics and resources for this branch.";
+  if (status) status.textContent = "Loading…";
 
   try {
-    const result = await api("/auth/me");
-    currentUser = result.user;
-    updateAuthButton();
-    await loadApplications();
+    const data = await api("/study/units?branch=" + encodeURIComponent(selectedBranch) + "&year=" + selectedYear);
+    const units = data.units || [];
+    if (status) status.textContent = units.length + " core topics";
+    if (count) count.innerHTML = units.length + '<span> topics</span>';
+
+    list.innerHTML = units.map((unit, index) => `
+      <div class="lesson ${index === 0 ? "current" : ""}">
+        <span class="check">${index + 1}</span>
+        <div><strong>${unit.title}</strong><small>${unit.description}</small></div>
+        <a class="small-btn" href="${unit.resource_url}" target="_blank" rel="noopener">${unit.resource_type === "practice" ? "Practice" : "Open"}</a>
+      </div>`).join("") || '<div class="empty-state">No study units found for this branch and year.</div>';
+
+    resources.innerHTML = units.map(unit => `
+      <div class="resource">
+        <span class="resource-icon">${String(unit.resource_type || "TOPIC").slice(0,3).toUpperCase()}</span>
+        <div><strong>${unit.title}</strong><small>${unit.description}</small></div>
+        <a class="outline-btn" href="${unit.resource_url}" target="_blank" rel="noopener">Study</a>
+      </div>`).join("");
   } catch {
-    authToken = "";
-    currentUser = null;
-    localStorage.removeItem("skillsetu_token");
-    updateAuthButton();
-    loadApplications();
+    if (status) status.textContent = "Unavailable";
+    list.innerHTML = '<div class="empty-state">Study material could not be loaded.</div>';
+    resources.innerHTML = "";
   }
+}
+
+async function changeBranch(branch) {
+  selectedBranch = branch;
+  localStorage.setItem("skillsetu_branch", selectedBranch);
+  refreshSkillPicker();
+
+  if (authToken && currentUser) {
+    try {
+      await api("/profile", { method: "PUT", body: JSON.stringify({ branch: selectedBranch }) });
+    } catch {
+      showToast("Branch changed for this session.");
+    }
+  }
+
+  await loadStudyUnits();
+  await loadOpportunities();
+}
+
+async function restoreSession() {
+  const select = document.getElementById("careerSelect");
+  if (authToken) {
+    try {
+      const result = await api("/auth/me");
+      currentUser = result.user;
+      const profileData = await api("/profile");
+      if (profileData.profile?.branch) selectedBranch = profileData.profile.branch;
+      if (profileData.profile?.year) selectedYear = Number(profileData.profile.year);
+    } catch {
+      authToken = "";
+      currentUser = null;
+      localStorage.removeItem("skillsetu_token");
+    }
+  }
+  if (select) select.value = selectedBranch;
+  localStorage.setItem("skillsetu_branch", selectedBranch);
+  localStorage.setItem("skillsetu_year", String(selectedYear));
+  updateAuthButton();
+  refreshSkillPicker();
+  await loadStudyUnits();
+  await loadOpportunities();
+  await loadApplications();
 }
 
 (function initialize() {
