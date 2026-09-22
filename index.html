@@ -21,6 +21,7 @@
       <nav class="side-nav" aria-label="Main navigation">
         <button class="nav-item active" data-view="overview"><span>⊞</span> Overview</button>
         <button class="nav-item" data-view="skills"><span>◎</span> Skill intelligence</button>
+        <button class="nav-item" data-view="resume"><span>▤</span> Resume & Career AI</button>
         <button class="nav-item" data-view="opportunities"><span>▣</span> Opportunities</button>
         <button class="nav-item" data-view="applications"><span>▤</span> Applications</button>
         <button class="nav-item" data-view="study"><span>⌁</span> Study path</button>
@@ -175,6 +176,40 @@
           <section class="two-col"><div class="panel"><div class="panel-head"><div><h2>Your skill map</h2><p>Verified through coursework, quizzes and projects.</p></div></div><div class="skill-row"><span>JavaScript</span><div class="skillbar"><i style="width:82%"></i></div><b>4.1</b></div><div class="skill-row"><span>SQL</span><div class="skillbar"><i style="width:68%"></i></div><b>3.4</b></div><div class="skill-row"><span>React</span><div class="skillbar"><i style="width:62%"></i></div><b>3.1</b></div><div class="skill-row"><span>Python</span><div class="skillbar"><i style="width:56%"></i></div><b>2.8</b></div><div class="skill-row"><span>Cloud</span><div class="skillbar"><i style="width:18%"></i></div><b>0.9</b></div></div><div class="panel"><div class="panel-head"><div><h2>Demand vs readiness</h2><p>Where employer demand is ahead of your current level.</p></div></div><div class="mini-chart"><div><span>Cloud</span><i style="width:92%"></i><em>High</em></div><div><span>SQL</span><i style="width:72%"></i><em>High</em></div><div><span>AI / ML</span><i style="width:64%"></i><em>Growing</em></div><div><span>React</span><i style="width:50%"></i><em>Medium</em></div></div></div></section>
         </div>
 
+
+        <div class="view hidden" id="resume">
+          <div class="page-heading">
+            <div><h1>Resume & Career AI</h1><p>Upload once, extract your skills, measure readiness and close the gaps that matter.</p></div>
+          </div>
+          <div class="resume-grid">
+            <section class="panel resume-upload-panel">
+              <div class="panel-head"><div><h2>Resume intelligence</h2><p>PDF, DOCX or TXT · Maximum 5 MB</p></div><span class="status-pill" id="resumeStatus">Not uploaded</span></div>
+              <form id="resumeForm" class="resume-form">
+                <label class="upload-drop" for="resumeFile">
+                  <span class="upload-icon">↑</span>
+                  <strong id="resumeFileName">Choose your resume</strong>
+                  <small>Drag-and-drop or click to upload</small>
+                  <input id="resumeFile" type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" required>
+                </label>
+                <button class="primary-btn" type="submit" id="resumeUploadBtn">Upload & Analyse Resume</button>
+              </form>
+              <div id="resumeResult" class="resume-result empty-state">Your resume score and extracted skills will appear here.</div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h2>Career readiness</h2><p>Turn your resume into an actionable plan.</p></div></div>
+              <div class="readiness-card"><span>RESUME SCORE</span><strong id="resumeScore">—</strong><small id="resumeScoreHint">Upload a resume to calculate your score.</small></div>
+              <div class="resume-actions">
+                <button class="outline-btn" id="resumeViewBtn" type="button" disabled>View uploaded resume</button>
+                <button class="outline-btn" id="resumeDeleteBtn" type="button" disabled>Remove resume</button>
+              </div>
+              <div id="resumeSkills" class="extracted-skills"></div>
+            </section>
+          </div>
+          <section class="panel career-gap-panel">
+            <div class="panel-head"><div><h2>Explainable skill-gap analysis</h2><p>See why an opportunity matches you and exactly what is missing.</p></div><span class="status-pill">Live</span></div>
+            <div id="resumeGapResult" class="gap-result empty-state">Upload your resume and select skills to unlock a personalized gap report.</div>
+          </section>
+        </div>
 
         <div class="view hidden" id="profile">
           <div class="page-heading"><div><h1>My skill profile</h1><p>Keep your academic record, skills, projects and career preferences together.</p></div><button class="primary-btn">Edit profile</button></div>
