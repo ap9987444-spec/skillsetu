@@ -25,8 +25,7 @@
         <button class="nav-item" data-view="applications"><span>▤</span> Applications</button>
         <button class="nav-item" data-view="study"><span>⌁</span> Study path</button>
         <button class="nav-item" data-view="profile"><span>♙</span> My skill profile</button>
-        <button class="nav-item" data-view="project-progress"><span>◔</span> Project progress</button>
-      </nav>
+        </nav>
 
       <div class="workspace-card">
         <div class="avatar">ST</div>
@@ -59,19 +58,6 @@
             </div>
             <button class="primary-btn" data-go="study">Continue study path</button>
           </div>
-
-          <section class="project-progress-card">
-            <div class="project-progress-main">
-              <div class="project-progress-title">
-                <span class="eyebrow">PROJECT STATUS</span>
-                <h2>SkillSetu development progress</h2>
-                <p>Live status calculated from the project's implementation milestones.</p>
-              </div>
-              <div class="project-progress-number"><strong id="projectPercent">0%</strong><span>complete</span></div>
-            </div>
-            <div class="project-progress-track"><i id="projectProgressBar"></i></div>
-            <div class="project-progress-meta"><span id="projectCompletedText">0 of 10 milestones complete</span><button class="text-btn" data-go="project-progress">View details ↗</button></div>
-          </section>
 
           <div class="metric-grid">
             <article class="metric-card"><span>STUDY PROGRESS</span><strong>42%</strong><small>12 of 28 learning units completed</small></article>
@@ -163,28 +149,6 @@
           <section class="two-col"><div class="panel"><div class="panel-head"><div><h2>Your skill map</h2><p>Verified through coursework, quizzes and projects.</p></div></div><div class="skill-row"><span>JavaScript</span><div class="skillbar"><i style="width:82%"></i></div><b>4.1</b></div><div class="skill-row"><span>SQL</span><div class="skillbar"><i style="width:68%"></i></div><b>3.4</b></div><div class="skill-row"><span>React</span><div class="skillbar"><i style="width:62%"></i></div><b>3.1</b></div><div class="skill-row"><span>Python</span><div class="skillbar"><i style="width:56%"></i></div><b>2.8</b></div><div class="skill-row"><span>Cloud</span><div class="skillbar"><i style="width:18%"></i></div><b>0.9</b></div></div><div class="panel"><div class="panel-head"><div><h2>Demand vs readiness</h2><p>Where employer demand is ahead of your current level.</p></div></div><div class="mini-chart"><div><span>Cloud</span><i style="width:92%"></i><em>High</em></div><div><span>SQL</span><i style="width:72%"></i><em>High</em></div><div><span>AI / ML</span><i style="width:64%"></i><em>Growing</em></div><div><span>React</span><i style="width:50%"></i><em>Medium</em></div></div></div></section>
         </div>
 
-
-        <div class="view hidden" id="project-progress">
-          <div class="page-heading">
-            <div><h1>Project progress</h1><p>A live milestone tracker for the SkillSetu project.</p></div>
-            <span class="status-pill" id="progressStatus">In active development</span>
-          </div>
-          <section class="project-progress-card progress-detail-card">
-            <div class="project-progress-main">
-              <div class="project-progress-title">
-                <span class="eyebrow">OVERALL COMPLETION</span>
-                <h2 id="progressHeadline">SkillSetu is under active development</h2>
-                <p>The percentage is calculated automatically from the milestone statuses below.</p>
-              </div>
-              <div class="project-progress-number"><strong id="projectPercentDetail">0%</strong><span>complete</span></div>
-            </div>
-            <div class="project-progress-track"><i id="projectProgressBarDetail"></i></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><h2>Development milestones</h2><p>Completed modules count toward the live percentage.</p></div><span class="status-pill" id="milestoneCount">0 / 10</span></div>
-            <div class="milestone-list" id="milestoneList"></div>
-          </section>
-        </div>
 
         <div class="view hidden" id="profile">
           <div class="page-heading"><div><h1>My skill profile</h1><p>Keep your academic record, skills, projects and career preferences together.</p></div><button class="primary-btn">Edit profile</button></div>
