@@ -105,27 +105,11 @@ function calculateMatch(job) {
 }
 
 function renderSkillMatcher() {
-  const host = document.getElementById("skills");
-  if (!host || document.getElementById("skillMatcher")) return;
-  const panel = document.createElement("section");
-  panel.className = "panel skill-matcher";
-  panel.id = "skillMatcher";
-  panel.innerHTML = `
-    <div class="panel-head">
-      <div><h2>Smart skill matching</h2><p>Choose skills relevant to your selected branch.</p></div>
-      <span class="status-pill">Live</span>
-    </div>
-    <div class="matcher-body">
-      <div class="matcher-grid">
-        <div><span class="matcher-label">YOUR CURRENT SKILLS</span><div class="skill-picker" id="skillPicker"></div></div>
-        <div class="matcher-result" id="matcherResult"></div>
-      </div>
-      <div class="recommendation-note"><strong>How it works:</strong> SkillSetu compares your skills with branch-specific opportunity requirements.</div>
-    </div>`;
-  host.insertBefore(panel, host.querySelector(".two-col"));
+  const panel = document.getElementById("skillMatcher");
+  if (!panel) return;
   refreshSkillPicker();
+  updateMatcher();
 }
-
 function refreshSkillPicker() {
   const picker = document.getElementById("skillPicker");
   if (!picker) return;
