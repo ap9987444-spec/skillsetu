@@ -212,8 +212,21 @@
         </div>
 
         <div class="view hidden" id="profile">
-          <div class="page-heading"><div><h1>My skill profile</h1><p>Keep your academic record, skills, projects and career preferences together.</p></div><button class="primary-btn">Edit profile</button></div>
+          <div class="page-heading"><div><h1>My skill profile</h1><p>Keep your academic record, skills, projects and career preferences together.</p></div><button class="primary-btn" id="editProfileBtn" type="button">Edit profile</button></div>
           <section class="profile-grid"><div class="panel profile-card"><div class="large-avatar">ST</div><h2>Student Profile</h2><p><span id="profileBranch">Computer Science</span> · Year <span id="profileYear">2</span> · CGPA 7.74</p><div class="profile-line"><span>Career direction</span><strong id="profileCareer">Career pathway</strong></div><div class="profile-line"><span>Preferred location</span><strong>India · Remote</strong></div><div class="profile-line"><span>Internship status</span><strong>Open to opportunities</strong></div></div><div class="panel"><div class="panel-head"><div><h2>Evidence portfolio</h2><p>Projects and achievements that strengthen your applications.</p></div></div><div class="resource"><span class="resource-icon">01</span><div><strong>SkillSetu Student Portal</strong><small>Web project · React · APIs</small></div><span class="status green">Verified</span></div><div class="resource"><span class="resource-icon">02</span><div><strong>SQL Analytics Project</strong><small>Database · Reporting · SQL</small></div><span class="status green">Verified</span></div><div class="resource"><span class="resource-icon">03</span><div><strong>Python Automation</strong><small>Python · Scripting</small></div><span class="status orange">Pending</span></div></div></section>
+          <section class="panel profile-editor hidden" id="profileEditor">
+            <div class="panel-head"><div><h2>Edit your profile</h2><p>Keep your career preferences current so matching stays relevant.</p></div></div>
+            <form id="profileForm" class="profile-form">
+              <label>Branch<select id="profileBranchInput" class="select"><option>Computer Science</option><option>Information Technology</option><option>Electronics & Communication</option><option>Mechanical Engineering</option><option>Electrical Engineering</option><option>Civil Engineering</option><option>AI & Data Science</option></select></label>
+              <label>Year<select id="profileYearInput" class="select"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label>
+              <label>CGPA<input id="profileCgpaInput" type="number" min="0" max="10" step="0.01" placeholder="7.50"></label>
+              <label>Career direction<input id="profileCareerInput" type="text" placeholder="Software Engineering"></label>
+              <label>Preferred location<input id="profileLocationInput" type="text" placeholder="India · Remote"></label>
+              <label class="check-label"><input id="profileOpenInput" type="checkbox" checked> Open to opportunities</label>
+              <button class="primary-btn" type="submit">Save profile</button>
+            </form>
+          </section>
+
         </div>
       </section>
     </main>
