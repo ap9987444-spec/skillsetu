@@ -52,7 +52,7 @@ document.getElementById("careerSelect")?.addEventListener("change",e=>{
 
 showView("overview");
 
-const API_BASE = window.SKILLSETU_API_BASE || '/api';
+const API_BASE = window.SKILLSETU_API_BASE || 'https://skillsetu-api-production.up.railway.app/api';
 let authToken = localStorage.getItem('skillsetu_token') || '';
 
 async function api(path, options={}) {
