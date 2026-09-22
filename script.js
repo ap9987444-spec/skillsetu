@@ -65,6 +65,27 @@ const skillAliases = {
   "Power Systems":["Power Systems","Electrical"]
 };
 
+const careerLabels = {
+  "Computer Science": "Software Engineering",
+  "Information Technology": "IT / Cloud / Systems",
+  "Electronics & Communication": "Embedded / Electronics",
+  "Mechanical Engineering": "Mechanical Design / Manufacturing",
+  "Electrical Engineering": "Power / Control / Automation",
+  "Civil Engineering": "Structures / Construction",
+  "AI & Data Science": "AI / Data / ML"
+};
+
+function updateBranchUI() {
+  const overview = document.getElementById("overviewBranchText");
+  const profileBranch = document.getElementById("profileBranch");
+  const profileYear = document.getElementById("profileYear");
+  const profileCareer = document.getElementById("profileCareer");
+  if (overview) overview.textContent = selectedBranch + " · Year " + selectedYear + " · Build your skills one step at a time.";
+  if (profileBranch) profileBranch.textContent = selectedBranch;
+  if (profileYear) profileYear.textContent = selectedYear;
+  if (profileCareer) profileCareer.textContent = careerLabels[selectedBranch] || "Career pathway";
+}
+
 function getJobSkills(job) {
   return (Array.isArray(job.skills) ? job.skills : String(job.skills || "").split(","))
     .map(skill => skill.trim())
@@ -469,6 +490,7 @@ async function changeBranch(branch) {
   selectedBranch = branch;
   localStorage.setItem("skillsetu_branch", selectedBranch);
   refreshSkillPicker();
+  updateBranchUI();
 
   if (authToken && currentUser) {
     try {
@@ -498,6 +520,7 @@ async function restoreSession() {
     }
   }
   if (select) select.value = selectedBranch;
+  updateBranchUI();
   localStorage.setItem("skillsetu_branch", selectedBranch);
   localStorage.setItem("skillsetu_year", String(selectedYear));
   updateAuthButton();
