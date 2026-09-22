@@ -45,7 +45,7 @@
         </div>
         <div class="top-actions">
           <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">☾</button>
-          <button class="profile-btn"><span class="mini-avatar">ST</span><span>Student</span>⌄</button>
+          <button class="profile-btn" id="authButton"><span class="mini-avatar">ST</span><span>Student Login</span>⌄</button>
         </div>
       </header>
 
@@ -156,6 +156,28 @@
         </div>
       </section>
     </main>
+  </div>
+  <div class="auth-modal hidden" id="authModal">
+    <div class="auth-backdrop" data-close-auth></div>
+    <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="auth-close" id="authClose" aria-label="Close">×</button>
+      <div class="auth-brand">SkillSetu</div>
+      <h2 id="authTitle">Student Login</h2>
+      <p id="authSubtitle">Log in with your email to save your profile and applications.</p>
+      <form id="loginForm">
+        <label>Email address<input id="loginEmail" type="email" autocomplete="email" required placeholder="student@example.com"></label>
+        <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
+        <button class="primary-btn auth-submit" type="submit">Login</button>
+      </form>
+      <form id="registerForm" class="hidden">
+        <label>Full name<input id="registerName" type="text" autocomplete="name" required placeholder="Your name"></label>
+        <label>Email address<input id="registerEmail" type="email" autocomplete="email" required placeholder="student@example.com"></label>
+        <label>Password<input id="registerPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters"></label>
+        <button class="primary-btn auth-submit" type="submit">Create student account</button>
+      </form>
+      <button class="auth-switch" id="authSwitch" type="button">New student? Create an account</button>
+      <small class="auth-note">Your account details and applications are stored securely in SkillSetu's database.</small>
+    </section>
   </div>
   <div class="toast" id="toast"></div>
   <script src="script.js"></script>
