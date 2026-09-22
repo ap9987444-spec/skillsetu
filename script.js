@@ -32,7 +32,8 @@ document.getElementById("themeToggle")?.addEventListener("click", event => {
 });
 
 async function api(path, options = {}) {
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const headers = { ...(options.headers || {}) };
+  if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   if (authToken) headers.Authorization = "Bearer " + authToken;
 
   const response = await fetch(API_BASE + path, { ...options, headers });
@@ -122,6 +123,7 @@ function refreshSkillPicker() {
     button.addEventListener("click", () => {
       currentSkills.has(skill) ? currentSkills.delete(skill) : currentSkills.add(skill);
       button.classList.toggle("selected", currentSkills.has(skill));
+      syncSelectedSkills();
       updateMatcher();
       renderOpportunities();
       applyOpportunityFilters();
@@ -430,6 +432,191 @@ function updateAuthButton() {
   window.skillsetuAuth = { openAuth, closeAuth };
 })();
 
+
+async function syncSelectedSkills() {
+  if (!authToken || !currentUser) return;
+  try {
+    await api("/skills", { method: "PUT", body: JSON.stringify({
+      skills: [...currentSkills].map(name => ({ name, level: 3 }))
+    })});
+  } catch {
+    showToast("Skills saved locally; account sync failed.");
+  }
+}
+
+async function loadSavedSkills() {
+  if (!authToken || !currentUser) return;
+  try {
+    const data = await api("/skills");
+    currentSkills.clear();
+    (data.skills || []).filter(s => Number(s.level) > 0).forEach(s => currentSkills.add(s.name));
+    refreshSkillPicker();
+  } catch {}
+}
+
+function setupResume() {
+  const form = document.getElementById("resumeForm");
+  const fileInput = document.getElementById("resumeFile");
+  const fileName = document.getElementById("resumeFileName");
+  const status = document.getElementById("resumeStatus");
+  const result = document.getElementById("resumeResult");
+  const score = document.getElementById("resumeScore");
+  const hint = document.getElementById("resumeScoreHint");
+  const skillsHost = document.getElementById("resumeSkills");
+  const gapHost = document.getElementById("resumeGapResult");
+  const uploadBtn = document.getElementById("resumeUploadBtn");
+  const viewBtn = document.getElementById("resumeViewBtn");
+  const deleteBtn = document.getElementById("resumeDeleteBtn");
+  if (!form || !fileInput) return;
+
+  fileInput.addEventListener("change", () => {
+    fileName.textContent = fileInput.files?.[0]?.name || "Choose your resume";
+  });
+
+  async function renderResume() {
+    if (!authToken || !currentUser) {
+      status.textContent = "Login required";
+      score.textContent = "—";
+      return;
+    }
+    try {
+      const data = await api("/resume");
+      const resume = data.resume;
+      if (!resume) {
+        status.textContent = "Not uploaded";
+        score.textContent = "—";
+        hint.textContent = "Upload a resume to calculate your score.";
+        viewBtn.disabled = true;
+        deleteBtn.disabled = true;
+        skillsHost.innerHTML = "";
+        return;
+      }
+      status.textContent = "Analysed";
+      score.textContent = String(resume.resume_score ?? 0) + "%";
+      hint.textContent = resume.file_name + " · Updated " + new Date(resume.updated_at).toLocaleDateString();
+      viewBtn.disabled = false;
+      deleteBtn.disabled = false;
+      const skills = String(resume.extracted_skills || "").split(",").map(s => s.trim()).filter(Boolean);
+      skillsHost.innerHTML = '<div class="extracted-title">Skills detected from resume</div>' +
+        (skills.length ? skills.map(s => '<span class="skill-pill">✓ ' + s + '</span>').join("") : '<span class="muted-small">No known skills detected yet.</span>');
+      result.classList.remove("empty-state");
+      result.innerHTML = '<strong>Resume intelligence is ready.</strong><small>Your document is stored with your account and the detected skills can be used for matching and gap analysis.</small>';
+      await loadResumeGap();
+    } catch {
+      status.textContent = "Unavailable";
+    }
+  }
+
+  async function loadResumeGap() {
+    if (!authToken || !currentUser) return;
+    try {
+      const data = await api("/skill-gap");
+      gapHost.classList.remove("empty-state");
+      gapHost.innerHTML = '<div class="gap-summary"><strong>' + data.match + '%</strong><span>match with ' + (data.opportunity?.title || "a recommended opportunity") + '</span></div>' +
+        '<div class="gap-columns"><div><b>Matched</b><p>' + (data.matched.length ? data.matched.map(s => '<span class="skill-pill">✓ ' + s + '</span>').join("") : '<span class="muted-small">None yet</span>') + '</p></div><div><b>Priority gaps</b><p>' + (data.missing.length ? data.missing.map(s => '<span class="gap-pill">Learn ' + s + '</span>').join("") : '<span class="muted-small">No major gaps for this opportunity.</span>') + '</p></div></div>';
+    } catch {}
+  }
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!authToken || !currentUser) {
+      window.skillsetuAuth?.openAuth("login");
+      showToast("Please log in before uploading a resume.");
+      return;
+    }
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Resume must be 5 MB or smaller.");
+      return;
+    }
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "Uploading & analysing…";
+    const body = new FormData();
+    body.append("resume", file);
+    try {
+      const data = await api("/resume", { method: "POST", body });
+      showToast("Resume analysed successfully.");
+      fileInput.value = "";
+      fileName.textContent = file.name;
+      score.textContent = String(data.resume_score) + "%";
+      status.textContent = "Analysed";
+      await renderResume();
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = "Upload & Analyse Resume";
+    }
+  });
+
+  viewBtn?.addEventListener("click", async () => {
+    if (!authToken) return;
+    window.open(API_BASE + "/resume/file", "_blank", "noopener");
+  });
+
+  deleteBtn?.addEventListener("click", async () => {
+    if (!confirm("Remove your uploaded resume?")) return;
+    try {
+      await api("/resume", { method: "DELETE" });
+      showToast("Resume removed.");
+      await renderResume();
+    } catch (error) { showToast(error.message); }
+  });
+
+  window.skillsetuResume = { render: renderResume };
+  renderResume();
+}
+
+function setupProfileEditor() {
+  const btn = document.getElementById("editProfileBtn");
+  const editor = document.getElementById("profileEditor");
+  const form = document.getElementById("profileForm");
+  if (!btn || !editor || !form) return;
+  btn.addEventListener("click", async () => {
+    if (!authToken || !currentUser) {
+      window.skillsetuAuth?.openAuth("login");
+      showToast("Please log in to edit your profile.");
+      return;
+    }
+    editor.classList.toggle("hidden");
+    if (editor.classList.contains("hidden")) return;
+    try {
+      const data = await api("/profile");
+      const p = data.profile || {};
+      document.getElementById("profileBranchInput").value = p.branch || selectedBranch;
+      document.getElementById("profileYearInput").value = String(p.year || selectedYear);
+      document.getElementById("profileCgpaInput").value = p.cgpa ?? "";
+      document.getElementById("profileCareerInput").value = p.career_direction || careerLabels[selectedBranch] || "";
+      document.getElementById("profileLocationInput").value = p.preferred_location || "India · Remote";
+      document.getElementById("profileOpenInput").checked = p.open_to_opportunities !== false;
+    } catch {}
+  });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!authToken) return;
+    try {
+      const payload = {
+        branch: document.getElementById("profileBranchInput").value,
+        year: Number(document.getElementById("profileYearInput").value),
+        cgpa: document.getElementById("profileCgpaInput").value ? Number(document.getElementById("profileCgpaInput").value) : null,
+        career_direction: document.getElementById("profileCareerInput").value,
+        preferred_location: document.getElementById("profileLocationInput").value,
+        open_to_opportunities: document.getElementById("profileOpenInput").checked
+      };
+      await api("/profile", { method: "PUT", body: JSON.stringify(payload) });
+      selectedBranch = payload.branch;
+      selectedYear = payload.year;
+      localStorage.setItem("skillsetu_branch", selectedBranch);
+      localStorage.setItem("skillsetu_year", String(selectedYear));
+      updateBranchUI();
+      await Promise.all([loadStudyUnits(), loadOpportunities()]);
+      editor.classList.add("hidden");
+      showToast("Profile updated successfully.");
+    } catch (error) { showToast(error.message); }
+  });
+}
+
 async function loadStudyUnits() {
   const list = document.getElementById("studyUnitsList");
   const resources = document.getElementById("studyResourcesList");
@@ -534,6 +721,9 @@ async function restoreSession() {
   localStorage.setItem("skillsetu_year", String(selectedYear));
   updateAuthButton();
   refreshSkillPicker();
+  setupResume();
+  setupProfileEditor();
+  await loadSavedSkills();
   await loadStudyUnits();
   await loadOpportunities();
   await loadApplications();
