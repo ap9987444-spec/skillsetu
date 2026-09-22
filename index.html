@@ -105,32 +105,49 @@
         <div class="view hidden" id="study">
           <div class="page-heading">
             <div><h1>My study & career path</h1><p>Follow a structured, year-wise route from foundations to internship readiness.</p></div>
-            <select class="select" id="careerSelect"><option>Computer Science</option><option>Information Technology</option><option>Electronics & Communication</option><option>Mechanical Engineering</option><option>Electrical Engineering</option><option>AI & Data Science</option></select>
+            <select class="select" id="careerSelect">
+  <option>Computer Science</option>
+  <option>Information Technology</option>
+  <option>Electronics & Communication</option>
+  <option>Mechanical Engineering</option>
+  <option>Electrical Engineering</option>
+  <option>Civil Engineering</option>
+  <option>AI & Data Science</option>
+</select>
           </div>
-          <div class="career-banner"><div><span class="eyebrow">CURRENT PATH</span><h2>Software Engineering → AI / Cloud</h2><p>Recommended route based on your current skills and opportunity demand.</p></div><div class="circle-progress">42<span>%</span></div></div>
-          <div class="year-tabs">
-            <button class="year-tab active">Year 1</button><button class="year-tab active">Year 2</button><button class="year-tab">Year 3</button><button class="year-tab">Year 4</button>
+          <div class="career-banner" id="careerBanner">
+            <div>
+              <span class="eyebrow">CURRENT PATH</span>
+              <h2 id="careerTitle">Computer Science · Year 1</h2>
+              <p id="careerDescription">Focused core subjects and resources for your selected branch.</p>
+            </div>
+            <div class="circle-progress" id="studyCount">0<span> topics</span></div>
+          </div>
+          <div class="year-tabs" id="yearTabs">
+            <button class="year-tab active" data-year="1">Year 1</button>
+            <button class="year-tab" data-year="2">Year 2</button>
+            <button class="year-tab" data-year="3">Year 3</button>
+            <button class="year-tab" data-year="4">Year 4</button>
           </div>
           <div class="study-grid">
-            <section class="panel"><div class="panel-head"><div><h2>Year 2 · Core skills</h2><p>Complete these units in sequence.</p></div><span class="status-pill">6 / 9 complete</span></div>
-              <div class="lesson done"><span class="check">✓</span><div><strong>Data Structures & Algorithms</strong><small>Arrays, linked lists, trees, graphs and complexity</small></div><b>Done</b></div>
-              <div class="lesson done"><span class="check">✓</span><div><strong>Database Systems</strong><small>SQL, normalisation, joins, indexing and transactions</small></div><b>Done</b></div>
-              <div class="lesson current"><span class="check">→</span><div><strong>Web Development</strong><small>HTML, CSS, JavaScript, APIs and responsive UI</small></div><button class="small-btn">Continue</button></div>
-              <div class="lesson"><span class="check">4</span><div><strong>Object-Oriented Programming</strong><small>Classes, interfaces, patterns and clean code</small></div><b>Locked</b></div>
-              <div class="lesson"><span class="check">5</span><div><strong>Operating Systems</strong><small>Processes, memory, scheduling and file systems</small></div><b>Locked</b></div>
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2 id="studyUnitsTitle">Core subjects</h2><p>Only the most important topics for this branch and year.</p></div>
+                <span class="status-pill" id="studyStatus">Loading…</span>
+              </div>
+              <div id="studyUnitsList"></div>
             </section>
-            <section class="panel"><div class="panel-head"><div><h2>Study resources</h2><p>Topic-wise material for your current unit.</p></div></div>
-              <div class="resource"><span class="resource-icon">PDF</span><div><strong>Web Development Notes</strong><small>12 chapters · Beginner → Intermediate</small></div><a class="outline-btn" href="https://developer.mozilla.org/en-US/docs/Web" target="_blank" rel="noopener">Open</a></div>
-              <div class="resource"><span class="resource-icon">▶</span><div><strong>JavaScript Practice Set</strong><small>42 exercises · 6 projects</small></div><a class="outline-btn" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noopener">Practice</a></div>
-              <div class="resource"><span class="resource-icon">⌘</span><div><strong>Mini Project: Portfolio</strong><small>Build · submit · get skill evidence</small></div><a class="outline-btn" href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">Start</a></div>
-              <div class="resource"><span class="resource-icon">?</span><div><strong>Topic Quiz</strong><small>15 questions · 20 minutes</small></div><a class="outline-btn" href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">Attempt</a></div>
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Study material</h2><p>Focused resources for the selected subjects.</p></div>
+              </div>
+              <div id="studyResourcesList"></div>
             </section>
-          </div>
-        </div>
+          </div></div>
 
         <div class="view hidden" id="opportunities">
           <div class="page-heading"><div><h1>Opportunities</h1><p>Internships and entry-level roles matched to your current readiness.</p></div><button class="primary-btn" id="filterBtn">Show high-match only</button></div>
-          <div class="filter-bar"><span class="filter active">All</span><span class="filter">Internships</span><span class="filter">Placements</span><span class="filter">Remote</span><span class="filter">AI / Data</span><span class="filter">Software</span></div>
+          <div class="filter-bar"><span class="filter active">All</span><span class="filter">Internships</span><span class="filter">Placements</span><span class="filter">Remote</span></div><small class="branch-note" id="opportunityBranchNote">Showing opportunities for your selected branch.</small>
           <section class="opportunity-cards"></section>
         </div>
 
