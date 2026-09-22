@@ -1,12 +1,3 @@
-IF OBJECT_ID('dbo.progress','U') IS NULL
-CREATE TABLE dbo.progress (
-  user_id INT NOT NULL,
-  study_unit_id INT NOT NULL,
-  completed BIT NOT NULL CONSTRAINT DF_progress_completed DEFAULT 0,
-  completed_at DATETIME2 NULL,
-  CONSTRAINT PK_progress PRIMARY KEY (user_id, study_unit_id)
-);
-
 IF OBJECT_ID('dbo.users','U') IS NULL
 CREATE TABLE dbo.users (
   id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_users PRIMARY KEY,
@@ -95,3 +86,14 @@ CREATE INDEX IX_study_units_branch_year ON dbo.study_units(branch, [year]);
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_opportunities_type' AND object_id=OBJECT_ID('dbo.opportunities'))
 CREATE INDEX IX_opportunities_type ON dbo.opportunities(type);
+IF OBJECT_ID('dbo.progress','U') IS NULL
+CREATE TABLE dbo.progress (
+  user_id INT NOT NULL,
+  study_unit_id INT NOT NULL,
+  completed BIT NOT NULL CONSTRAINT DF_progress_completed DEFAULT 0,
+  completed_at DATETIME2 NULL,
+  CONSTRAINT PK_progress PRIMARY KEY (user_id, study_unit_id),
+  CONSTRAINT FK_progress_users FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE CASCADE,
+  CONSTRAINT FK_progress_study_units FOREIGN KEY (study_unit_id) REFERENCES dbo.study_units(id) ON DELETE CASCADE
+);
+
