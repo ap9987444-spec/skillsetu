@@ -22,9 +22,16 @@ const units = [
 const opportunities = [
   ['Frontend Engineer Intern','Nimbus Cloud Labs','Pune','internship','₹20,000 / mo','3 months','Build responsive product interfaces','React,JavaScript,SQL'],
   ['LLM Applications Intern','Prayag Health AI','Hyderabad','internship','₹44,000 / mo','6 months','Build AI-powered application workflows','Python,AI / ML,APIs'],
-  ['Software Engineer — Platform','Aeris Systems','Bengaluru','placement','₹24.8 LPA','Full-time','Develop platform services and tooling','DSA,Backend,Git'],
-  ['Data Analyst Intern','Sangam Analytics','Remote','internship','₹25,000 / mo','4 months','Create data reports and dashboards','SQL,Python,Data'],
-  ['Cloud Engineering Intern','Indus Digital','Noida','internship','₹30,000 / mo','6 months','Automate cloud infrastructure','Cloud,Git,APIs']
+  ['Software Engineer — Platform','Aeris Systems','Bengaluru','placement','₹24.8 LPA','Full-time','Develop platform services and tooling','DSA,Git,APIs'],
+  ['Data Analyst Intern','Sangam Analytics','Noida','internship','₹18,000 / mo','4 months','Create data reports and dashboards','SQL,Python,Power BI'],
+  ['Cloud Support Intern','Indus Digital','Remote','internship','₹22,000 / mo','3 months','Support cloud infrastructure and developer tooling','Cloud,Git,APIs'],
+  ['Mechanical Design Intern','Mitra Engineering','Pune','internship','₹16,000 / mo','3 months','Support CAD and mechanical design work','AutoCAD,CAD,Manufacturing'],
+  ['Embedded Systems Intern','Electra Labs','Bengaluru','internship','₹21,000 / mo','4 months','Build and test embedded prototypes','C,Microcontrollers,Embedded'],
+  ['Electrical Systems Trainee','PowerGrid Works','Lucknow','placement','₹5.8 LPA','Full-time','Work on electrical systems and analysis','MATLAB,Power Systems,Electrical'],
+  ['Civil Project Intern','CivicBuild India','Lucknow','internship','₹15,000 / mo','3 months','Support civil project planning and estimation','AutoCAD,Surveying,Estimation'],
+  ['Machine Learning Intern','Astra Intelligence','Remote','internship','₹30,000 / mo','5 months','Build and evaluate machine-learning workflows','Python,AI / ML,SQL'],
+  ['QA Automation Intern','NextWave Tech','Hyderabad','internship','₹19,000 / mo','3 months','Create automated software tests','JavaScript,Testing,Git'],
+  ['IoT Solutions Intern','EdgeCircuit','Ahmedabad','internship','₹20,000 / mo','4 months','Build applied IoT solutions and sensor workflows','C,IoT,Sensors']
 ];
 
 await initDb();
@@ -57,17 +64,6 @@ for (const [title, employer, location, type, stipend_or_package, duration, descr
       { title, employer, location, type, stipend_or_package, duration, description, skills: skillsText }
     );
   }
-}
-
-const demoEmail = 'demo@skillsetu.local';
-const existing = await query('SELECT id FROM users WHERE email=@email LIMIT 1', { email: demoEmail });
-if (!existing.rows.length) {
-  const hash = await bcrypt.hash('SkillSetuDemo123!', 12);
-  const created = await query(
-    "INSERT INTO users(name,email,password_hash,role) VALUES(@name,@email,@password_hash,'student') RETURNING id",
-    { name: 'Demo Student', email: demoEmail, password_hash: hash }
-  );
-  await query('INSERT INTO student_profiles(user_id) VALUES(@id) ON CONFLICT (user_id) DO NOTHING', { id: created.rows[0].id });
 }
 
 console.log('SkillSetu PostgreSQL database seeded successfully.');

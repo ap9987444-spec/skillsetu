@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { query, initDb, publicUser } from './db.js';
+import { query, initDb } from './db.js';
 import { requireAuth, requireRole, signToken } from './auth.js';
 
 dotenv.config();
