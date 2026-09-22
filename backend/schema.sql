@@ -92,3 +92,18 @@ CREATE INDEX IF NOT EXISTS ix_study_units_branch_year ON study_units(branch, yea
 CREATE INDEX IF NOT EXISTS ix_opportunities_type ON opportunities(type);
 CREATE INDEX IF NOT EXISTS ix_opportunities_branch ON opportunities(branch);
 CREATE INDEX IF NOT EXISTS ix_notifications_user_created ON notifications(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS resumes (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(120) NOT NULL,
+  file_data BYTEA NOT NULL,
+  extracted_text TEXT,
+  extracted_skills VARCHAR(3000),
+  resume_score INTEGER DEFAULT 0 CHECK (resume_score BETWEEN 0 AND 100),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS ix_resumes_user_updated ON resumes(user_id, updated_at DESC);
