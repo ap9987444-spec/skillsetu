@@ -52,7 +52,7 @@ document.getElementById("careerSelect")?.addEventListener("change",e=>{
 
 showView("overview");
 
-const API_BASE = window.SKILLSETU_API_BASE || 'http://localhost:4000/api';
+const API_BASE = window.SKILLSETU_API_BASE || '/api';
 let authToken = localStorage.getItem('skillsetu_token') || '';
 
 async function api(path, options={}) {
