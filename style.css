@@ -67,3 +67,17 @@ body.dark{--bg:#10141e;--white:#171d29;--ink:#e7eaf0;--muted:#9aa2b0;--line:#2b3
 .profile-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;padding:18px 19px}.profile-form label{display:grid;gap:6px;font-size:10px;font-weight:800}.profile-form input,.profile-form select{box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--white);color:var(--ink)}.profile-form .check-label{display:flex;align-items:center;gap:7px}.profile-form .check-label input{width:auto}.profile-form button{grid-column:1/-1;width:max-content}
 @media(max-width:800px){.resume-grid,.gap-columns{grid-template-columns:1fr}.profile-form{grid-template-columns:1fr}.profile-form button{grid-column:auto}}
 .dark .upload-drop,.dark .resume-result,.dark .readiness-card{background:#10141e;border-color:#2b3240}
+
+
+.skill-verification-panel{margin-top:18px}
+.verification-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.verification-row .select{min-width:230px}
+.verification-result{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:12px;line-height:1.5}
+.verification-quiz{display:grid;gap:14px}
+.verification-quiz h3{margin:0;color:var(--ink)}
+.verification-quiz fieldset{border:1px solid var(--line);border-radius:10px;padding:12px}
+.verification-quiz legend{font-weight:800;color:var(--ink);padding:0 4px}
+.verification-quiz label{display:block;margin-top:8px;cursor:pointer}
+.verification-outcome{margin-top:14px;padding:11px;border-radius:9px;font-weight:800}
+.verification-outcome.passed{background:var(--blue-soft);color:var(--blue)}
+.verification-outcome.failed{background:#fff4e8;color:#9a5a00}
