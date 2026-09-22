@@ -1,37 +1,36 @@
-import sql from 'mssql';
+import pg from 'pg';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const config = {
-  server: process.env.DB_SERVER || 'localhost',
-  port: Number(process.env.DB_PORT || 1433),
-  database: process.env.DB_NAME || 'SkillSetu',
-  user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || '',
-  options: {
-    encrypt: String(process.env.DB_ENCRYPT || 'true').toLowerCase() === 'true',
-    trustServerCertificate: String(process.env.DB_TRUST_SERVER_CERTIFICATE || 'false').toLowerCase() === 'true'
-  },
-  pool: { max: 10, min: 0, idleTimeoutMillis: 30000 }
-};
+const { Pool } = pg;
 
-export const poolPromise = new sql.ConnectionPool(config).connect();
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: String(process.env.DB_SSL || 'false').toLowerCase() === 'true'
+    ? { rejectUnauthorized: false }
+    : undefined,
+  max: 10,
+  idleTimeoutMillis: 30000
+});
 
 export async function initDb() {
-  const pool = await poolPromise;
   const schema = fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
   const statements = schema.split(';').map(s => s.trim()).filter(Boolean);
-  for (const statement of statements) await pool.request().query(statement);
+  for (const statement of statements) await pool.query(statement);
   return pool;
 }
 
 export async function query(text, params = {}) {
-  const pool = await poolPromise;
-  const request = pool.request();
-  for (const [name, value] of Object.entries(params)) request.input(name, value);
-  return request.query(text);
+  const names = Object.keys(params);
+  const values = names.map(name => params[name]);
+  const sql = text.replace(/@([A-Za-z_][A-Za-z0-9_]*)/g, (_, name) => {
+    const index = names.indexOf(name);
+    if (index === -1) throw new Error('Missing SQL parameter: ' + name);
+    return '$' + (index + 1);
+  });
+  return pool.query(sql, values);
 }
 
 export function publicUser(user) {
@@ -43,5 +42,3 @@ export function publicUser(user) {
     created_at: user.created_at
   } : null;
 }
-
-export { sql };
