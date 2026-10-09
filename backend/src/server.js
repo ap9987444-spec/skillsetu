@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { query, initDb, publicUser } from './db.js';
 import { requireAuth, requireRole, signToken } from './auth.js';
+import careerAiRouter from './career-ai.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ const origins = process.env.CLIENT_ORIGIN
 
 app.use(cors({ origin: origins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
+app.use('/api/career-ai', careerAiRouter);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const ok = (res, data) => res.json({ data });
