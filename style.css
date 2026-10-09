@@ -113,3 +113,74 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .nav-item.active{box-shadow:inset 3px 0 0 var(--blue)}
 .metric-card,.panel,.job-card{transition:border-color .18s ease,box-shadow .18s ease}
 .metric-card:hover,.job-card:hover{border-color:rgba(214,40,57,.35);box-shadow:0 8px 24px rgba(16,16,18,.06)}
+
+
+/* Student-friendly UI polish: preserve existing layout and all interactions */
+:root{
+  --student-lilac:#f2edff;
+  --student-mint:#e8f7f0;
+  --student-sky:#edf5ff;
+  --student-card-shadow:0 8px 24px rgba(25,32,48,.045);
+}
+body{background:linear-gradient(180deg,#faf9ff 0%,var(--bg) 260px);line-height:1.45}
+.sidebar{box-shadow:8px 0 30px rgba(10,10,14,.06)}
+.brand-mark{width:35px;height:35px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,#48202a,#211316);font-size:23px}
+.brand-name{letter-spacing:.1px}
+.nav-item{min-height:42px;transition:background .18s ease,color .18s ease,transform .18s ease}
+.nav-item:hover{transform:translateX(2px)}
+.nav-item.active{background:linear-gradient(100deg,#351217,#241316)}
+.workspace-card{background:rgba(255,255,255,.035);border-color:#302a2d}
+.topbar{backdrop-filter:blur(12px);box-shadow:0 3px 14px rgba(25,32,48,.025)}
+.content{padding-top:32px}
+.page-heading{margin-bottom:25px}
+.page-heading h1{font-size:clamp(22px,2vw,28px);letter-spacing:-.7px;line-height:1.2}
+.page-heading p{line-height:1.6}
+.metric-grid{gap:16px}
+.metric-card{position:relative;border-radius:15px;padding:19px 18px;box-shadow:var(--student-card-shadow);overflow:hidden}
+.metric-card:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),#f2a3ab);opacity:.8}
+.metric-card:nth-child(2):before{background:linear-gradient(90deg,#368365,#9bd8bd)}
+.metric-card:nth-child(3):before{background:linear-gradient(90deg,#7658c7,#c8b7ff)}
+.metric-card:nth-child(4):before{background:linear-gradient(90deg,#c97916,#f4d29e)}
+.metric-card strong{font-size:26px;letter-spacing:-.7px}
+.panel,.career-banner,.project-progress-card{border-radius:15px;box-shadow:var(--student-card-shadow)}
+.panel-head{padding:18px 20px}
+.panel-head h2{font-size:15px;letter-spacing:-.15px}
+.panel-head p{line-height:1.5}
+.path-list,.gap-list{padding-left:21px;padding-right:21px}
+.path-row{padding:15px 0}
+.path-year{width:31px;height:31px}
+.progress{height:7px}
+.primary-btn,.small-btn{border-radius:9px;padding:11px 17px}
+.outline-btn,.filter,.year-tab,.skill-choice{border-radius:9px;transition:all .18s ease}
+.career-banner{padding:24px 26px;background:linear-gradient(115deg,#fff 0%,#fff8f8 100%)}
+.career-banner h2{font-size:20px;letter-spacing:-.3px}
+.circle-progress{box-shadow:0 0 0 6px #fff6f6}
+.job-card{border-radius:14px;padding:19px;box-shadow:var(--student-card-shadow)}
+.job-card h3{font-size:15px;letter-spacing:-.2px}
+.company-logo{border-radius:11px}
+.apply-btn{margin-top:2px}
+.pipeline>div{border-radius:13px;box-shadow:var(--student-card-shadow)}
+.pipeline b{font-size:25px}
+.matcher-result,.visual-card,.readiness-card{border-radius:13px}
+.skill-choice{padding:8px 11px}
+.skill-choice.selected{box-shadow:0 0 0 3px rgba(214,40,57,.08)}
+.upload-drop{border-radius:14px;transition:background .18s ease,border-color .18s ease}
+.toast{border-radius:11px;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+button:active{transform:translateY(1px)}
+@media(min-width:1200px){
+  .content{padding-left:36px;padding-right:36px}
+  .metric-card{min-height:118px}
+}
+@media(max-width:700px){
+  .content{padding-top:23px}
+  .metric-grid{gap:10px}
+  .metric-card{padding:15px 13px;min-height:105px;border-radius:12px}
+  .metric-card strong{font-size:22px}
+  .metric-card small{line-height:1.45}
+  .career-banner{padding:18px}
+  .panel-head{padding:15px}
+  .path-list,.gap-list{padding-left:15px;padding-right:15px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
