@@ -6,6 +6,7 @@
   <meta name="description" content="SkillSetu — student skill intelligence, study paths, internships and placement readiness.">
   <title>SkillSetu | Student Workspace</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="career-ai.css">
 </head>
 <body>
   <div class="app-shell">
@@ -300,7 +301,43 @@
       <small class="auth-note">Your account details and applications are stored securely in SkillSetu's database.</small>
     </section>
   </div>
+  <div class="career-ai-widget">
+    <button class="career-ai-launcher" id="careerAiLauncher" type="button" aria-controls="careerAiPanel" aria-expanded="false">Career Guide AI</button>
+    <section class="career-ai-panel hidden" id="careerAiPanel" aria-label="SkillSetu Career Guide">
+      <header class="career-ai-head">
+        <div><strong>SkillSetu Career Guide</strong><small>Skill gaps · Study roadmap · Career questions</small></div>
+        <button class="career-ai-close" id="careerAiClose" type="button" aria-label="Close career guide">×</button>
+      </header>
+      <div class="career-ai-context">
+        <label>Branch
+          <select id="careerAiBranch">
+            <option>Computer Science</option><option>Information Technology</option><option>Electronics & Communication</option><option>Mechanical Engineering</option><option>Electrical Engineering</option><option>Civil Engineering</option><option>AI & Data Science</option>
+          </select>
+        </label>
+        <label>Study year
+          <select id="careerAiYear"><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option></select>
+        </label>
+        <label>Target career / role
+          <input id="careerAiTarget" maxlength="160" placeholder="e.g. Embedded Engineer, Data Analyst">
+        </label>
+        <label>Current skills (include what you are learning)
+          <textarea id="careerAiSkills" maxlength="1200" placeholder="e.g. C basics, circuits, Arduino; beginner level"></textarea>
+        </label>
+      </div>
+      <div class="career-ai-actions">
+        <button id="careerAiGapBtn" type="button">Analyse my skill gaps</button>
+        <button id="careerAiRoadmapBtn" type="button">Build my study roadmap</button>
+      </div>
+      <div class="career-ai-messages" id="careerAiMessages" aria-live="polite"></div>
+      <form class="career-ai-form" id="careerAiForm">
+        <input id="careerAiInput" maxlength="2000" autocomplete="off" placeholder="Ask about skills, study or careers…" required>
+        <button id="careerAiSend" type="submit">Send</button>
+      </form>
+      <div class="career-ai-note">AI suggestions are guidance, not verified skill scores or a guarantee of placement. Avoid entering private information.</div>
+    </section>
+  </div>
   <div class="toast" id="toast"></div>
   <script src="script.js"></script>
+  <script src="career-ai.js"></script>
 </body>
 </html>
