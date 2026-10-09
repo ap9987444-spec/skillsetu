@@ -1,0 +1,31 @@
+/* SkillSetu Career Guidance AI — isolated styles only */
+.career-ai-launcher{position:fixed;right:24px;bottom:24px;z-index:1000;border:0;border-radius:999px;background:#d62839;color:#fff;padding:13px 18px;font:600 13px inherit;box-shadow:0 8px 28px #0002;cursor:pointer}
+.career-ai-launcher:hover{filter:brightness(.94)}
+.career-ai-panel{position:fixed;right:24px;bottom:82px;z-index:1000;width:min(410px,calc(100vw - 28px));height:min(690px,calc(100vh - 110px));display:flex;flex-direction:column;background:var(--white,#fff);color:var(--ink,#202630);border:1px solid var(--line,#e3e5e8);border-radius:14px;box-shadow:0 18px 60px #0002;overflow:hidden}
+.career-ai-panel.hidden{display:none!important}
+.career-ai-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#171719;color:#fff}
+.career-ai-head strong{display:block;font-size:14px}.career-ai-head small{display:block;color:#d2c9cb;font-size:10px;margin-top:3px}
+.career-ai-close{border:0;background:transparent;color:#fff;font-size:24px;cursor:pointer;line-height:1}
+.career-ai-context{display:grid;grid-template-columns:1fr 100px;gap:8px;padding:12px;border-bottom:1px solid var(--line,#e3e5e8);background:var(--bg,#f8f8f8)}
+.career-ai-context label{display:grid;gap:4px;font-size:10px;color:var(--muted,#737b86)}
+.career-ai-context label:nth-child(3),.career-ai-context label:nth-child(4){grid-column:1/-1}
+.career-ai-context input,.career-ai-context select,.career-ai-context textarea{width:100%;min-width:0;border:1px solid var(--line,#e3e5e8);border-radius:6px;background:var(--white,#fff);color:var(--ink,#202630);padding:8px;font:12px inherit}
+.career-ai-context textarea{resize:vertical;min-height:48px}
+.career-ai-messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.career-ai-message{max-width:95%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.55;padding:10px 12px;border-radius:10px;background:var(--bg,#f8f8f8);border:1px solid var(--line,#e3e5e8)}
+.career-ai-message.user{align-self:flex-end;background:#fff0f1;border-color:#f2c6ca}
+.career-ai-message.assistant{align-self:flex-start}
+.career-ai-message strong{font-weight:700}
+.career-ai-actions{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 10px}
+.career-ai-actions button{border:1px solid var(--line,#e3e5e8);background:var(--white,#fff);color:var(--ink,#202630);border-radius:6px;padding:7px 9px;font-size:10px;cursor:pointer}
+.career-ai-actions button:hover{border-color:#d62839}
+.career-ai-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line,#e3e5e8)}
+.career-ai-form input{flex:1;min-width:0;border:1px solid var(--line,#e3e5e8);border-radius:7px;padding:10px;font:12px inherit;background:var(--white,#fff);color:var(--ink,#202630)}
+.career-ai-form button{border:0;border-radius:7px;background:#d62839;color:#fff;padding:0 13px;font-weight:700;cursor:pointer}
+.career-ai-form button:disabled{opacity:.55;cursor:wait}
+.career-ai-note{padding:0 12px 10px;color:var(--muted,#737b86);font-size:9px;line-height:1.4}
+body.dark .career-ai-context{background:#0c0c0e}
+body.dark .career-ai-context input,body.dark .career-ai-context select,body.dark .career-ai-context textarea,body.dark .career-ai-form input,body.dark .career-ai-actions button{background:#171719;color:#f1eff0;border-color:#30272a}
+body.dark .career-ai-message{background:#171719;border-color:#30272a}
+body.dark .career-ai-message.user{background:#351217;border-color:#64252d}
+@media(max-width:520px){.career-ai-launcher{right:14px;bottom:14px}.career-ai-panel{right:8px;bottom:68px;width:calc(100vw - 16px);height:calc(100vh - 84px)}}
