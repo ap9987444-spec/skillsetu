@@ -53,7 +53,8 @@ const branchSkills = {
   "Mechanical Engineering": ["CAD","AutoCAD","SolidWorks","Manufacturing","Thermodynamics","Materials","CNC","GD&T"],
   "Electrical Engineering": ["Circuit Theory","MATLAB","Power Systems","Electrical Machines","Power Electronics","PLC","Control Systems"],
   "Civil Engineering": ["AutoCAD","Surveying","Structural Analysis","RCC","Estimation","Project Management"],
-  "AI & Data Science": ["Python","SQL","Statistics","Pandas","Machine Learning","Deep Learning","Data Visualization","Git"]
+  "AI & Data Science": ["Python","SQL","Statistics","Pandas","Machine Learning","Deep Learning","Data Visualization","Git"],
+  "Agriculture": ["Agronomy","Soil Science","Crop Production","Plant Pathology","Agricultural Economics","Irrigation","Farm Machinery","GIS & Remote Sensing"]
 };
 
 const currentSkills = new Set((() => {
@@ -161,7 +162,8 @@ const careerLabels = {
   "Mechanical Engineering": "Mechanical Design / Manufacturing",
   "Electrical Engineering": "Power / Control / Automation",
   "Civil Engineering": "Structures / Construction",
-  "AI & Data Science": "AI / Data / ML"
+  "AI & Data Science": "AI / Data / ML",
+  "Agriculture": "Agronomy / Sustainable Farming / Agri-Tech"
 };
 
 function updateBranchUI() {
@@ -804,6 +806,29 @@ function setupProfileEditor() {
   });
 }
 
+const agricultureStudyUnits = {
+  1: [
+    { title: "Agriculture Fundamentals & Crop Production", description: "Agricultural systems, crop seasons, growth stages and basic agronomic practices.", resource_url: "https://icar.org.in/", resource_type: "course" },
+    { title: "Soil Science & Soil Fertility", description: "Soil texture, structure, pH, nutrients, organic matter and soil health.", resource_url: "https://www.fao.org/soils-portal/en/", resource_type: "docs" },
+    { title: "Agricultural Botany", description: "Plant structure, photosynthesis, plant growth and crop classification.", resource_url: "https://nptel.ac.in/", resource_type: "course" }
+  ],
+  2: [
+    { title: "Agronomy & Cropping Systems", description: "Crop rotation, intercropping, seed rate, sowing methods and weed management.", resource_url: "https://icar.org.in/", resource_type: "course" },
+    { title: "Agricultural Entomology & Plant Pathology", description: "Common crop pests, plant diseases, diagnosis and integrated pest management.", resource_url: "https://www.fao.org/plant-health-portal/home/en/", resource_type: "docs" },
+    { title: "Agricultural Economics & Marketing", description: "Farm costs, farm management, supply chains, markets and price basics.", resource_url: "https://www.fao.org/markets-and-trade/en/", resource_type: "docs" }
+  ],
+  3: [
+    { title: "Irrigation & Water Management", description: "Soil-water relations, irrigation methods, drainage and water-use efficiency.", resource_url: "https://www.fao.org/land-water/en/", resource_type: "docs" },
+    { title: "Plant Breeding & Seed Technology", description: "Genetic variation, selection, crop improvement and seed quality.", resource_url: "https://icar.org.in/", resource_type: "course" },
+    { title: "Farm Machinery & Precision Agriculture", description: "Farm equipment, mechanisation, sensors, GPS and precision-farming basics.", resource_url: "https://www.fao.org/digital-agriculture/en/", resource_type: "docs" }
+  ],
+  4: [
+    { title: "Sustainable Agriculture & Climate Resilience", description: "Climate-smart farming, soil conservation, biodiversity and sustainable inputs.", resource_url: "https://www.fao.org/climate-smart-agriculture/en/", resource_type: "docs" },
+    { title: "GIS, Remote Sensing & Agri-Tech", description: "Satellite imagery, crop monitoring, mapping and digital agriculture applications.", resource_url: "https://www.fao.org/digital-agriculture/en/", resource_type: "docs" },
+    { title: "Field Project & Career Readiness", description: "Plan a field study, analyse observations, document findings and prepare a project portfolio.", resource_url: "https://icar.org.in/", resource_type: "course" }
+  ]
+};
+
 async function loadStudyUnits() {
   const list = document.getElementById("studyUnitsList");
   const resources = document.getElementById("studyResourcesList");
@@ -820,7 +845,7 @@ async function loadStudyUnits() {
 
   try {
     const data = await api("/study/units?branch=" + encodeURIComponent(selectedBranch) + "&year=" + selectedYear);
-    const units = data.units || [];
+    const units = data.units?.length ? data.units : (selectedBranch === "Agriculture" ? agricultureStudyUnits[selectedYear] || [] : []);
     if (status) status.textContent = units.length + " core topics";
     if (count) count.innerHTML = units.length + '<span> topics</span>';
 
@@ -838,9 +863,27 @@ async function loadStudyUnits() {
         <a class="outline-btn" href="${unit.resource_url}" target="_blank" rel="noopener">Study</a>
       </div>`).join("");
   } catch {
-    if (status) status.textContent = "Unavailable";
-    list.innerHTML = '<div class="empty-state">Study material could not be loaded.</div>';
-    resources.innerHTML = "";
+    const units = selectedBranch === "Agriculture" ? agricultureStudyUnits[selectedYear] || [] : [];
+    if (units.length) {
+      if (status) status.textContent = units.length + " core topics";
+      if (count) count.innerHTML = units.length + '<span> topics</span>';
+      list.innerHTML = units.map((unit, index) => `
+      <div class="lesson ${index === 0 ? "current" : ""}">
+        <span class="check">${index + 1}</span>
+        <div><strong>${unit.title}</strong><small>${unit.description}</small></div>
+        <a class="small-btn" href="${unit.resource_url}" target="_blank" rel="noopener">${unit.resource_type === "practice" ? "Practice" : "Open"}</a>
+      </div>`).join("");
+      resources.innerHTML = units.map(unit => `
+      <div class="resource">
+        <span class="resource-icon">${String(unit.resource_type || "TOPIC").slice(0,3).toUpperCase()}</span>
+        <div><strong>${unit.title}</strong><small>${unit.description}</small></div>
+        <a class="outline-btn" href="${unit.resource_url}" target="_blank" rel="noopener">Study</a>
+      </div>`).join("");
+    } else {
+      if (status) status.textContent = "Unavailable";
+      list.innerHTML = '<div class="empty-state">Study material could not be loaded.</div>';
+      resources.innerHTML = "";
+    }
   }
 }
 
