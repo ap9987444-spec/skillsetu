@@ -791,7 +791,12 @@ function setupProfileEditor() {
       selectedYear = payload.year;
       localStorage.setItem("skillsetu_branch", selectedBranch);
       localStorage.setItem("skillsetu_year", String(selectedYear));
+      restoreLocalSkillsForBranch();
+      refreshSkillPicker();
+      refreshVerificationSkills();
       updateBranchUI();
+      await loadSavedSkills();
+      renderSkillAnalytics();
       await Promise.all([loadStudyUnits(), loadOpportunities()]);
       editor.classList.add("hidden");
       showToast("Profile updated successfully.");
