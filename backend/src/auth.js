@@ -3,13 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const secret = process.env.JWT_SECRET || 'development-only-secret';
+const configuredSecret = String(process.env.JWT_SECRET || '').trim();
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction && (configuredSecret.length < 32 || configuredSecret === 'development-only-secret')) {
+  throw new Error('Production requires a strong JWT_SECRET of at least 32 characters.');
+}
+
+const secret = configuredSecret || 'development-only-secret';
 
 export function signToken(user) {
   return jwt.sign(
     { sub: String(user.id), role: user.role, email: user.email },
     secret,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', algorithm: 'HS256' }
   );
 }
 
@@ -18,7 +25,7 @@ export function requireAuth(req, res, next) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Authentication required' });
   try {
-    req.auth = jwt.verify(token, secret);
+    req.auth = jwt.verify(token, secret, { algorithms: ['HS256'] });
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });

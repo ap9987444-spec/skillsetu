@@ -9,7 +9,7 @@ const { Pool } = pg;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: String(process.env.DB_SSL || 'false').toLowerCase() === 'true'
-    ? { rejectUnauthorized: false }
+    ? { rejectUnauthorized: true }
     : undefined,
   max: 10,
   idleTimeoutMillis: 30000

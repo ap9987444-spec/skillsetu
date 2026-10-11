@@ -4,6 +4,8 @@ import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { query, initDb, publicUser } from './db.js';
 import { requireAuth, requireRole, signToken } from './auth.js';
@@ -13,13 +15,47 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const origins = process.env.CLIENT_ORIGIN
-  ? process.env.CLIENT_ORIGIN.split(',').map(s => s.trim())
-  : true;
+const isProduction = process.env.NODE_ENV === 'production';
+const configuredOrigins = (process.env.CLIENT_ORIGIN ||
+  (isProduction ? 'https://skillsetu-wheat.vercel.app' : 'http://localhost:5500'))
+  .split(',').map(origin => origin.trim()).filter(Boolean);
+const allowedOrigins = new Set(configuredOrigins);
 
-app.use(cors({ origin: origins, credentials: true }));
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
-app.use('/api/career-ai', careerAiRouter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again later.' }
+});
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts. Please try again later.' }
+});
+const careerAiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many Career Guide requests. Please try again later.' }
+});
+
+app.use('/api/career-ai', careerAiLimiter, careerAiRouter);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const ok = (res, data) => res.json({ data });
@@ -33,21 +69,29 @@ app.get('/api/health', async (_, res) => {
   }
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', registerLimiter, async (req, res) => {
   const { name, email, password, role = 'student' } = req.body || {};
-  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required' });
-  if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!normalizedName || normalizedName.length > 120 ||
+      !normalizedEmail || normalizedEmail.length > 255 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+      typeof password !== 'string') {
+    return res.status(400).json({ error: 'Enter a valid name, email and password' });
+  }
+  if (password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters and no more than 72 bytes' });
+  }
   if (!['student', 'institute', 'employer'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
   try {
-    const normalizedEmail = String(email).trim().toLowerCase();
     const exists = await query('SELECT id FROM users WHERE LOWER(email)=@email LIMIT 1', { email: normalizedEmail });
     if (exists.rows.length) return res.status(409).json({ error: 'An account with this email already exists' });
 
     const hash = await bcrypt.hash(password, 12);
     const created = await query(
       'INSERT INTO users(name,email,password_hash,role) VALUES(@name,@email,@password_hash,@role) RETURNING *',
-      { name: String(name).trim(), email: normalizedEmail, password_hash: hash, role }
+      { name: normalizedName, email: normalizedEmail, password_hash: hash, role }
     );
     const u = created.rows[0];
 
@@ -62,10 +106,11 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = req.body?.password || '';
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    if (!email || !password) return res.status(401).json({ error: 'Invalid email or password' });
     const result = await query('SELECT * FROM users WHERE LOWER(email)=@email LIMIT 1', { email });
     const u = result.rows[0];
     if (!u || !(await bcrypt.compare(password, u.password_hash))) {
@@ -235,8 +280,15 @@ app.get('/api/resume/file', requireAuth, async (req, res) => {
   );
   const resume = result.rows[0];
   if (!resume) return res.status(404).json({ error: 'Resume not found' });
-  res.setHeader('Content-Type', resume.mime_type);
-  res.setHeader('Content-Disposition', 'inline; filename="' + String(resume.file_name).replace(/["\\]/g, '') + '"');
+  const extension = String(resume.file_name || '').toLowerCase().split('.').pop();
+  const safeMimeType = extension === 'pdf'
+    ? 'application/pdf'
+    : extension === 'docx'
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : 'text/plain; charset=utf-8';
+  res.setHeader('Content-Type', safeMimeType);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + String(resume.file_name).replace(/["\\]/g, '') + '"');
   res.send(resume.file_data);
 });
 
@@ -591,7 +643,7 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
   ok(res, { notifications: result.rows });
 });
 
-app.patch('/api/applications/:id/status', requireAuth, requireRole('employer', 'admin'), async (req, res) => {
+app.patch('/api/applications/:id/status', requireAuth, requireRole('admin'), async (req, res) => {
   const allowed = ['saved', 'applied', 'screening', 'interview', 'offer', 'rejected'];
   if (!allowed.includes(req.body?.status)) return res.status(400).json({ error: 'Invalid status' });
   await query(
