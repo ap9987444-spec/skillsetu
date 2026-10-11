@@ -262,6 +262,16 @@ app.put('/api/skills', requireAuth, async (req, res) => {
       { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Claimed by student — verification pending' }
     );
   }
+  const branchNames = Array.isArray(req.body?.branch_skills)
+    ? [...new Set(req.body.branch_skills.map(name => String(name || '').trim()).filter(name => name.length > 0 && name.length <= 120))]
+    : [];
+  const selectedNames = [...new Set(items.map(item => String(item?.name || '').trim()).filter(Boolean))];
+  if (branchNames.length) {
+    await query(
+      'DELETE FROM user_skills WHERE user_id=@user_id AND skill_id IN (SELECT id FROM skills WHERE name = ANY(@branch_names::text[])) AND skill_id NOT IN (SELECT id FROM skills WHERE name = ANY(@selected_names::text[]))',
+      { user_id: userId, branch_names: branchNames, selected_names: selectedNames }
+    );
+  }
   const result = await query(
     'SELECT s.id,s.name,COALESCE(us.level,0) AS level,COALESCE(us.verified,FALSE) AS verified FROM skills s LEFT JOIN user_skills us ON us.skill_id=s.id AND us.user_id=@id ORDER BY s.name',
     { id: userId }
@@ -290,7 +300,7 @@ const verificationBank = {
     { q: 'React components should return what?', options: ['A database row', 'A UI representation', 'A CSS file', 'A SQL query'], answer: 1 },
     { q: 'Which prop helps React identify list items?', options: ['id', 'indexOnly', 'key', 'nameOnly'], answer: 2 }
   ]
-  ,
+  ],
   DSA: [
     { q: 'Which data structure follows LIFO order?', options: ['Queue', 'Stack', 'Tree', 'Graph'], answer: 1 },
     { q: 'What is the average time complexity of binary search on a sorted array?', options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1) always'], answer: 1 },
