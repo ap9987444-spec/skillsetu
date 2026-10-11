@@ -488,6 +488,7 @@ async function syncSelectedSkills() {
   if (!authToken || !currentUser) return;
   try {
     await api("/skills", { method: "PUT", body: JSON.stringify({
+      branch_skills: branchSkills[selectedBranch] || [],
       skills: [...currentSkills].map(name => ({ name, level: 3 }))
     })});
   } catch {
