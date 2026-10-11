@@ -399,6 +399,17 @@ async function loadApplications() {
   }
 }
 
+function updateStudentIdentity() {
+  const name = authToken && currentUser ? String(currentUser.name || "Student").trim() : "";
+  const greeting = document.getElementById("overviewGreeting");
+  const profileName = document.getElementById("profileName");
+  const profileAvatar = document.getElementById("profileAvatar");
+
+  if (greeting) greeting.textContent = name ? "Good to see you, " + name : "Good to see you, Student";
+  if (profileName) profileName.textContent = name || "Student Profile";
+  if (profileAvatar) profileAvatar.textContent = name ? name.slice(0, 2).toUpperCase() : "ST";
+}
+
 function updateAuthButton() {
   const button = document.getElementById("authButton");
   if (!button) return;
@@ -414,6 +425,7 @@ function updateAuthButton() {
     label.textContent = "Student Login";
     if (avatar) avatar.textContent = "ST";
   }
+  updateStudentIdentity();
 }
 
 (function setupAuth() {
@@ -535,6 +547,23 @@ function updateAuthButton() {
   });
 
   window.skillsetuAuth = { openAuth, closeAuth };
+
+  // Restore the registered student's identity from the API after a page refresh.
+  (async () => {
+    if (!authToken) {
+      updateAuthButton();
+      return;
+    }
+    try {
+      const session = await api("/auth/me");
+      currentUser = session.user || null;
+      updateAuthButton();
+      await Promise.all([loadApplications(), loadSavedSkills()]);
+    } catch {
+      // Keep the existing session token; a temporary API issue should not erase it.
+      updateAuthButton();
+    }
+  })();
 })();
 
 
