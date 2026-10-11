@@ -299,7 +299,6 @@ const verificationBank = {
     { q: 'Which hook is commonly used for local component state?', options: ['useRoute', 'useState', 'useClass', 'useValue'], answer: 1 },
     { q: 'React components should return what?', options: ['A database row', 'A UI representation', 'A CSS file', 'A SQL query'], answer: 1 },
     { q: 'Which prop helps React identify list items?', options: ['id', 'indexOnly', 'key', 'nameOnly'], answer: 2 }
-  ]
   ],
   DSA: [
     { q: 'Which data structure follows LIFO order?', options: ['Queue', 'Stack', 'Tree', 'Graph'], answer: 1 },
