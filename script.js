@@ -223,12 +223,12 @@ function refreshSkillPicker() {
 function updateMatcher() {
   const result = document.getElementById("matcherResult");
   if (!result) return;
+  renderSkillAnalytics();
   if (!opportunities.length) {
     result.innerHTML = "<div class=\"match-next\">No opportunities are available for this branch yet.</div>";
     return;
   }
 
-  renderSkillAnalytics();
   const ranked = opportunities.map(job => {
     const skills = getJobSkills(job);
     const matched = skills.filter(skillMatches);
