@@ -64,8 +64,48 @@ const currentSkills = new Set((() => {
   return selectedBranch === "Computer Science" ? ["JavaScript","SQL","React","Python","DSA","Git"] : [];
 })());
 
+let verifiedSkills = new Set();
+let skillLevels = new Map();
+let skillDemand = new Map();
+
 function persistLocalSkills() {
   localStorage.setItem("skillsetu_skills_" + selectedBranch, JSON.stringify([...currentSkills]));
+}
+
+function renderSkillAnalytics() {
+  const rows = document.getElementById("skillMapRows");
+  const demandHost = document.getElementById("demandReadinessChart");
+  const strengthHost = document.getElementById("skillStrengthBars");
+  const branchList = branchSkills[selectedBranch] || [];
+  const chosen = branchList.filter(skill => currentSkills.has(skill));
+  const displaySkills = [...chosen, ...branchList.filter(skill => !currentSkills.has(skill))].slice(0, 5);
+  const levelFor = skill => Math.max(0, Math.min(5, Number(skillLevels.get(skill) ?? (currentSkills.has(skill) ? 3 : 0))));
+  if (rows) {
+    rows.innerHTML = displaySkills.map(skill => {
+      const level = levelFor(skill);
+      const status = verifiedSkills.has(skill) ? "Verified" : currentSkills.has(skill) ? "Self-declared" : "Not added";
+      return '<div class="skill-map-row"><div class="skill-map-title"><strong>' + skill + '</strong><span class="skill-evidence ' + (verifiedSkills.has(skill) ? "verified" : "") + '">' + status + '</span></div><div class="skillbar"><i style="width:' + (level * 20) + '%"></i></div><small>' + level + '/5 readiness</small></div>';
+    }).join("") || '<div class="empty-state">No skills are configured for this branch yet.</div>';
+  }
+  if (strengthHost) {
+    strengthHost.innerHTML = displaySkills.map(skill => {
+      const level = levelFor(skill);
+      return '<div class="chart-item"><span>' + skill + '</span><div><i style="width:' + (level * 20) + '%"></i></div><b>' + level + '/5</b></div>';
+    }).join("") || '<div class="empty-state">No skill data available.</div>';
+  }
+  if (demandHost) {
+    const knownDemand = branchList.filter(skill => skillDemand.has(skill)).slice(0, 4);
+    if (!knownDemand.length) {
+      demandHost.innerHTML = '<div class="empty-state">Sign in to compare your saved readiness with skill demand metadata.</div>';
+    } else {
+      demandHost.innerHTML = knownDemand.map(skill => {
+        const demand = String(skillDemand.get(skill) || "medium").toLowerCase();
+        const demandScore = demand === "high" ? 92 : demand === "growing" ? 76 : 58;
+        const readiness = levelFor(skill) * 20;
+        return '<div class="demand-row"><div class="demand-row-label"><span>' + skill + '</span><em>' + demand + ' demand</em></div><div class="demand-dual"><div title="Demand: ' + demandScore + '%"><i style="width:' + demandScore + '%"></i></div><div title="Readiness: ' + readiness + '%"><i style="width:' + readiness + '%"></i></div></div></div>';
+      }).join("") + '<div class="demand-legend"><span><i class="demand-key"></i>Employer demand</span><span><i class="readiness-key"></i>Your readiness</span></div>';
+    }
+  }
 }
 
 const verificationSkillsByBranch = {
@@ -90,12 +130,16 @@ function refreshVerificationSkills() {
 
 function restoreLocalSkillsForBranch() {
   currentSkills.clear();
+  verifiedSkills = new Set();
+  skillLevels = new Map();
+  skillDemand = new Map();
   try {
     const saved = JSON.parse(localStorage.getItem("skillsetu_skills_" + selectedBranch) || "null");
     if (Array.isArray(saved)) saved.filter(skill => (branchSkills[selectedBranch] || []).includes(skill)).forEach(skill => currentSkills.add(skill));
     else if (selectedBranch === "Computer Science") ["JavaScript","SQL","React","Python","DSA","Git"].forEach(skill => currentSkills.add(skill));
   } catch {}
   persistLocalSkills();
+  renderSkillAnalytics();
 }
 
 const skillAliases = {
@@ -159,12 +203,15 @@ function refreshSkillPicker() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "skill-choice" + (currentSkills.has(skill) ? " selected" : "");
+    button.setAttribute("aria-pressed", String(currentSkills.has(skill)));
     button.textContent = skill;
     button.addEventListener("click", () => {
       currentSkills.has(skill) ? currentSkills.delete(skill) : currentSkills.add(skill);
       persistLocalSkills();
       button.classList.toggle("selected", currentSkills.has(skill));
+      button.setAttribute("aria-pressed", String(currentSkills.has(skill)));
       syncSelectedSkills();
+      renderSkillAnalytics();
       updateMatcher();
       renderOpportunities();
       applyOpportunityFilters();
@@ -181,6 +228,7 @@ function updateMatcher() {
     return;
   }
 
+  renderSkillAnalytics();
   const ranked = opportunities.map(job => {
     const skills = getJobSkills(job);
     const matched = skills.filter(skillMatches);
@@ -501,11 +549,15 @@ async function loadSavedSkills() {
   try {
     const data = await api("/skills");
     const allowed = new Set(branchSkills[selectedBranch] || []);
+    skillLevels = new Map((data.skills || []).map(skill => [skill.name, Number(skill.level) || 0]));
+    skillDemand = new Map((data.skills || []).map(skill => [skill.name, skill.demand_level || "medium"]));
+    verifiedSkills = new Set((data.skills || []).filter(skill => skill.verified).map(skill => skill.name));
     currentSkills.clear();
     (data.skills || []).filter(s => Number(s.level) > 0 && allowed.has(s.name)).forEach(s => currentSkills.add(s.name));
     persistLocalSkills();
     refreshSkillPicker();
     refreshVerificationSkills();
+    renderSkillAnalytics();
     updateMatcher();
   } catch {}
 }
