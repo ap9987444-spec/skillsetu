@@ -252,11 +252,24 @@ app.put('/api/skills', requireAuth, async (req, res) => {
     const name = String(item?.name || '').trim();
     const level = Math.max(0, Math.min(5, Number(item?.level || 0)));
     if (!name) continue;
-    const skill = await query('SELECT id FROM skills WHERE LOWER(name)=LOWER(@name) LIMIT 1', { name });
-    if (!skill.rows.length) continue;
+    if (!name || name.length > 120) continue;
+    const skill = await query(
+      "INSERT INTO skills(name,category,demand_level) VALUES(@name,'Student-declared','medium') ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+      { name }
+    );
     await query(
-      'INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,FALSE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=EXCLUDED.level,verified=FALSE,evidence=EXCLUDED.evidence',
+      "INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,FALSE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=CASE WHEN user_skills.verified THEN GREATEST(user_skills.level,EXCLUDED.level) ELSE EXCLUDED.level END,verified=user_skills.verified,evidence=CASE WHEN user_skills.verified THEN user_skills.evidence ELSE EXCLUDED.evidence END",
       { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Claimed by student — verification pending' }
+    );
+  }
+  const branchNames = Array.isArray(req.body?.branch_skills)
+    ? [...new Set(req.body.branch_skills.map(name => String(name || '').trim()).filter(name => name.length > 0 && name.length <= 120))]
+    : [];
+  const selectedNames = [...new Set(items.map(item => String(item?.name || '').trim()).filter(Boolean))];
+  if (branchNames.length) {
+    await query(
+      'DELETE FROM user_skills WHERE user_id=@user_id AND skill_id IN (SELECT id FROM skills WHERE name = ANY(@branch_names::text[])) AND skill_id NOT IN (SELECT id FROM skills WHERE name = ANY(@selected_names::text[]))',
+      { user_id: userId, branch_names: branchNames, selected_names: selectedNames }
     );
   }
   const result = await query(
@@ -286,6 +299,146 @@ const verificationBank = {
     { q: 'Which hook is commonly used for local component state?', options: ['useRoute', 'useState', 'useClass', 'useValue'], answer: 1 },
     { q: 'React components should return what?', options: ['A database row', 'A UI representation', 'A CSS file', 'A SQL query'], answer: 1 },
     { q: 'Which prop helps React identify list items?', options: ['id', 'indexOnly', 'key', 'nameOnly'], answer: 2 }
+  ],
+  DSA: [
+    { q: 'Which data structure follows LIFO order?', options: ['Queue', 'Stack', 'Tree', 'Graph'], answer: 1 },
+    { q: 'What is the average time complexity of binary search on a sorted array?', options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1) always'], answer: 1 },
+    { q: 'Which structure is commonly used for breadth-first search?', options: ['Stack', 'Queue', 'Heap only', 'Hash set only'], answer: 1 }
+  ],
+  Git: [
+    { q: 'Which command creates a new commit from staged changes?', options: ['git push', 'git commit', 'git fetch', 'git status'], answer: 1 },
+    { q: 'Which command shows the working tree status?', options: ['git status', 'git merge', 'git clone', 'git tag'], answer: 0 },
+    { q: 'Which command downloads a repository to your computer?', options: ['git diff', 'git clone', 'git log', 'git stash'], answer: 1 }
+  ],
+  APIs: [
+    { q: 'Which HTTP method is conventionally used to retrieve a resource?', options: ['GET', 'DELETE', 'PATCH', 'CONNECT'], answer: 0 },
+    { q: 'What does JSON primarily represent?', options: ['A styling language', 'Structured data', 'A database server', 'A network cable'], answer: 1 },
+    { q: 'Which status code usually means a successful HTTP request?', options: ['404', '500', '200', '301'], answer: 2 }
+  ],
+  Networks: [
+    { q: 'What does DNS commonly translate?', options: ['Domain names to IP addresses', 'HTML to CSS', 'Passwords to hashes', 'Files to folders'], answer: 0 },
+    { q: 'Which protocol is commonly used to load secure websites?', options: ['HTTPS', 'FTP only', 'SMTP', 'ARP only'], answer: 0 },
+    { q: 'What does an IP address identify at the network layer?', options: ['A network interface address', 'A CSS class', 'A database column', 'A file extension'], answer: 0 }
+  ],
+  Linux: [
+    { q: 'Which command lists files in a directory?', options: ['ls', 'cd', 'pwd', 'touch'], answer: 0 },
+    { q: 'Which command prints the current directory path?', options: ['mkdir', 'pwd', 'rm', 'cat'], answer: 1 },
+    { q: 'Which command changes file permissions on Unix-like systems?', options: ['chmod', 'grep', 'echo', 'whoami'], answer: 0 }
+  ],
+  Cybersecurity: [
+    { q: 'What is the principle of least privilege?', options: ['Give every user admin rights', 'Grant only the access needed', 'Reuse one password everywhere', 'Disable all updates'], answer: 1 },
+    { q: 'Which is the safest way to store user passwords?', options: ['Plain text', 'Reversible encoding', 'Salted, slow password hash', 'A public spreadsheet'], answer: 2 },
+    { q: 'What is multi-factor authentication designed to add?', options: ['A second proof of identity', 'A faster CPU', 'More database rows', 'A public profile'], answer: 0 }
+  ],
+  C: [
+    { q: 'Which function is the standard entry point in a hosted C program?', options: ['start()', 'main()', 'run()', 'init()'], answer: 1 },
+    { q: 'Which operator obtains the address of a variable?', options: ['*', '&', '%', '->'], answer: 1 },
+    { q: 'Which header declares printf()?', options: ['stdlib.h', 'string.h', 'stdio.h', 'math.h'], answer: 2 }
+  ],
+  "Digital Electronics": [
+    { q: 'What is the output of an AND gate when one input is 0?', options: ['Always 1', '0', 'Undefined', 'Alternates'], answer: 1 },
+    { q: 'How many bits are in a standard binary digit?', options: ['1', '2', '4', '8'], answer: 0 },
+    { q: 'Which circuit stores one bit of state?', options: ['Adder', 'Multiplexer', 'Flip-flop', 'Decoder only'], answer: 2 }
+  ],
+  Microcontrollers: [
+    { q: 'What is GPIO commonly used for?', options: ['General-purpose digital input/output', 'Graphics rendering only', 'Database indexing', 'Internet domain registration'], answer: 0 },
+    { q: 'What does an interrupt allow a controller to do?', options: ['Respond to an event', 'Erase all firmware', 'Increase supply voltage automatically', 'Replace the clock source always'], answer: 0 },
+    { q: 'Which peripheral converts an analogue signal into a digital value?', options: ['DAC', 'ADC', 'UART', 'GPIO'], answer: 1 }
+  ],
+  Embedded: [
+    { q: 'Which bus is commonly used for short-distance chip communication with clock and data lines?', options: ['SPI', 'SMTP', 'HTTP', 'DNS'], answer: 0 },
+    { q: 'What is firmware?', options: ['Software designed for a device', 'A mechanical bearing', 'A spreadsheet formula', 'A type of solder only'], answer: 0 },
+    { q: 'Why are timing constraints important in real-time embedded systems?', options: ['Correctness can depend on meeting deadlines', 'They remove the need for testing', 'They guarantee unlimited memory', 'They replace sensors'], answer: 0 }
+  ],
+  IoT: [
+    { q: 'What does IoT connect?', options: ['Physical devices that sense or exchange data', 'Only printed books', 'Only desktop monitors', 'Only offline spreadsheets'], answer: 0 },
+    { q: 'Which component commonly measures a physical condition?', options: ['Sensor', 'Compiler', 'Router table only', 'Text editor'], answer: 0 },
+    { q: 'What is MQTT commonly used for?', options: ['Lightweight messaging between devices/services', '3D mechanical drawing', 'C memory allocation', 'Civil surveying'], answer: 0 }
+  ],
+  CAD: [
+    { q: 'What does CAD stand for?', options: ['Computer-Aided Design', 'Circuit Array Data', 'Computer Access Directory', 'Calculated Axis Division'], answer: 0 },
+    { q: 'Why are dimensions used in an engineering drawing?', options: ['To specify measurable sizes', 'To change material strength', 'To power a motor', 'To encrypt a file'], answer: 0 },
+    { q: 'What is a 3D assembly used to represent?', options: ['Multiple components fitted together', 'A single text paragraph', 'A database backup', 'A circuit voltage only'], answer: 0 }
+  ],
+  Thermodynamics: [
+    { q: 'The first law of thermodynamics expresses conservation of what?', options: ['Mass only', 'Energy', 'Electric charge only', 'Angular momentum only'], answer: 1 },
+    { q: 'Heat naturally flows from which region to which?', options: ['Colder to hotter without work', 'Hotter to colder', 'Lower pressure to higher in every case', 'There is no general direction'], answer: 1 },
+    { q: 'What is a system boundary in thermodynamics?', options: ['A real or imaginary surface around the system', 'A type of turbine blade', 'A CAD shortcut', 'A unit of temperature'], answer: 0 }
+  ],
+  Manufacturing: [
+    { q: 'What is CNC short for?', options: ['Computer Numerical Control', 'Central Network Circuit', 'Calculated Normal Curve', 'Continuous Numeric Copy'], answer: 0 },
+    { q: 'What is a primary purpose of quality inspection?', options: ['Check conformance to specifications', 'Increase defects', 'Remove all documentation', 'Change a product name'], answer: 0 },
+    { q: 'Which process removes material using a rotating cutting tool in many common setups?', options: ['Milling', 'Casting', 'Forging only', 'Sintering only'], answer: 0 }
+  ],
+  "Circuit Theory": [
+    { q: 'Kirchhoff’s Current Law states that at a node, current is conserved. What is the algebraic sum of currents?', options: ['Always 1 A', 'Zero', 'Always the supply voltage', 'Infinite'], answer: 1 },
+    { q: 'Ohm’s law relates voltage, current and what?', options: ['Resistance', 'Frequency only', 'Magnetic flux only', 'Capacitance only'], answer: 0 },
+    { q: 'In a series circuit, which quantity is the same through ideal components?', options: ['Current', 'Voltage across every component', 'Resistance', 'Power'], answer: 0 }
+  ],
+  "Power Systems": [
+    { q: 'What is a transformer primarily used to change in an AC system?', options: ['Voltage level', 'Frequency in all cases', 'Power factor to exactly one automatically', 'DC polarity'], answer: 0 },
+    { q: 'What is the purpose of electrical transmission lines?', options: ['Transfer electrical power over distance', 'Store all energy indefinitely', 'Convert AC to text', 'Measure concrete strength'], answer: 0 },
+    { q: 'What does a circuit breaker do during certain fault conditions?', options: ['Interrupt current', 'Generate unlimited power', 'Increase fault current', 'Replace grounding'], answer: 0 }
+  ],
+  "Power Electronics": [
+    { q: 'What is a rectifier commonly used to convert?', options: ['AC to DC', 'DC to AC only', 'Heat to mass', 'Digital data to concrete'], answer: 0 },
+    { q: 'Which device is widely used as a controlled semiconductor switch?', options: ['IGBT', 'Resistor only', 'Fuse only', 'Transformer core only'], answer: 0 },
+    { q: 'What does an inverter commonly convert?', options: ['DC to AC', 'AC to DC only', 'Light to sound', 'Pressure to force'], answer: 0 }
+  ],
+  PLC: [
+    { q: 'What does PLC stand for in industrial automation?', options: ['Programmable Logic Controller', 'Power Line Capacitor', 'Primary Load Converter', 'Process Language Compiler'], answer: 0 },
+    { q: 'What is a PLC input commonly connected to?', options: ['A sensor or switch', 'Only a website URL', 'A drawing dimension', 'A database table'], answer: 0 },
+    { q: 'Why is an interlock used in a control system?', options: ['To prevent unsafe or invalid operation', 'To increase every motor speed', 'To remove all alarms', 'To store a CAD file'], answer: 0 }
+  ],
+  "Control Systems": [
+    { q: 'What is feedback in a control system?', options: ['Using output information to influence control', 'Disconnecting every sensor', 'A type of wire insulation only', 'A database query'], answer: 0 },
+    { q: 'What is a setpoint?', options: ['Desired target value', 'Measured error only', 'A fuse rating', 'A network port'], answer: 0 },
+    { q: 'What is a common purpose of a PID controller?', options: ['Regulate a process using proportional, integral and derivative terms', 'Store SQL tables', 'Draw building plans', 'Compile C headers'], answer: 0 }
+  ],
+  Surveying: [
+    { q: 'What is levelling used to determine?', options: ['Elevation differences', 'Concrete chemical formula only', 'Electric current', 'Database latency'], answer: 0 },
+    { q: 'What is a benchmark in surveying?', options: ['A point with a known elevation', 'A type of steel beam only', 'A network password', 'A CAD texture'], answer: 0 },
+    { q: 'Which instrument is commonly used to measure horizontal and vertical angles?', options: ['Theodolite', 'Oscilloscope', 'Thermometer', 'Clamp meter'], answer: 0 }
+  ],
+  "Structural Analysis": [
+    { q: 'What is the main purpose of structural analysis?', options: ['Estimate forces, reactions and deformations', 'Choose website colours', 'Measure network bandwidth', 'Program a microcontroller only'], answer: 0 },
+    { q: 'For a simply supported beam with a central point load, the support reactions are equal when what is true?', options: ['The supports are symmetric and the load is centered', 'One support is removed', 'The load is outside the span', 'The beam has no supports'], answer: 0 },
+    { q: 'What does a bending-moment diagram represent?', options: ['Variation of bending moment along a member', 'Concrete curing time only', 'Soil colour', 'Current in a circuit'], answer: 0 }
+  ],
+  RCC: [
+    { q: 'Why is steel reinforcement commonly used with concrete?', options: ['To help resist tensile forces', 'To make concrete transparent', 'To eliminate curing', 'To replace all cement'], answer: 0 },
+    { q: 'What does RCC stand for?', options: ['Reinforced Cement Concrete', 'Rotating Circuit Controller', 'Rapid Concrete Cooling', 'Reinforced Clay Composite'], answer: 0 },
+    { q: 'Why is concrete curing important?', options: ['It supports hydration and strength development', 'It removes the need for mix design', 'It guarantees zero cracking', 'It instantly dries all water'], answer: 0 }
+  ],
+  Estimation: [
+    { q: 'What is a bill of quantities used for?', options: ['List measured work items and quantities', 'Record source code only', 'Measure current and voltage', 'Store student passwords'], answer: 0 },
+    { q: 'What is a rate analysis used to estimate?', options: ['Cost per unit of work', 'A building’s exact lifespan', 'Soil colour only', 'Network packet size'], answer: 0 },
+    { q: 'Why are dimensions checked before quantity calculation?', options: ['To calculate quantities consistently', 'To avoid all site inspections', 'To change structural loads', 'To replace drawings'], answer: 0 }
+  ],
+  Statistics: [
+    { q: 'Which measure is the arithmetic average?', options: ['Mean', 'Range', 'Mode only', 'Variance'], answer: 0 },
+    { q: 'What does standard deviation describe?', options: ['Spread of values around the mean', 'The largest value only', 'The number of columns', 'A model’s file size'], answer: 0 },
+    { q: 'What is a sample in statistics?', options: ['A subset of a population', 'Always the entire population', 'A chart title', 'A missing value marker only'], answer: 0 }
+  ],
+  Pandas: [
+    { q: 'Which Pandas object is two-dimensional and labelled?', options: ['DataFrame', 'Series', 'Index only', 'Tuple'], answer: 0 },
+    { q: 'Which operation is commonly used to inspect the first rows of a DataFrame?', options: ['head()', 'tailor()', 'firstrow()', 'showall()'], answer: 0 },
+    { q: 'What does dropna() commonly do?', options: ['Remove missing-value rows or columns according to options', 'Sort every column alphabetically', 'Train a neural network', 'Create a database server'], answer: 0 }
+  ],
+  "Machine Learning": [
+    { q: 'What is a training set used for?', options: ['Fit model parameters', 'Only display final charts', 'Replace all test data', 'Store user passwords'], answer: 0 },
+    { q: 'Why keep a test set separate from training data?', options: ['Estimate performance on unseen examples', 'Increase training memorization', 'Guarantee perfect accuracy', 'Remove the need for evaluation'], answer: 0 },
+    { q: 'What is overfitting?', options: ['Model learns training-specific patterns that generalize poorly', 'Model has no parameters', 'Dataset contains only numbers', 'A model runs without input'], answer: 0 }
+  ],
+  "Data Visualization": [
+    { q: 'Which chart is usually suitable for comparing values across categories?', options: ['Bar chart', 'Only a network packet trace', 'Raw binary dump', 'Password table'], answer: 0 },
+    { q: 'Why label chart axes?', options: ['Explain what the values represent', 'Increase data accuracy automatically', 'Remove outliers automatically', 'Change the underlying dataset'], answer: 0 },
+    { q: 'What can a scatter plot help reveal?', options: ['Relationships between two numeric variables', 'Only a file directory', 'Password strength by default', 'A guaranteed causal effect'], answer: 0 }
+  ],
+  Cloud: [
+    { q: 'What is cloud computing?', options: ['On-demand computing resources delivered over a network', 'Only a local spreadsheet', 'A type of transistor', 'A mechanical drawing format'], answer: 0 },
+    { q: 'What is a common benefit of managed cloud services?', options: ['Less infrastructure administration for the customer', 'No need for security', 'Unlimited free usage always', 'No monitoring needed'], answer: 0 },
+    { q: 'Why use environment variables for deployment configuration?', options: ['Separate configuration from source code', 'Make secrets public', 'Replace authentication', 'Automatically fix every bug'], answer: 0 }
   ]
 };
 
@@ -306,8 +459,10 @@ app.post('/api/skill-verification/:skill', requireAuth, async (req, res) => {
   const correct = questions.reduce((n, item, i) => n + (Number(answers[i]) === item.answer ? 1 : 0), 0);
   const passed = correct >= 2;
   const userId = Number(req.auth.sub);
-  const skill = await query('SELECT id FROM skills WHERE LOWER(name)=LOWER(@name) LIMIT 1', { name: key });
-  if (!skill.rows.length) return res.status(404).json({ error: 'Skill not found' });
+  const skill = await query(
+    "INSERT INTO skills(name,category,demand_level) VALUES(@name,'Skill verification','high') ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+    { name: key }
+  );
 
   if (passed) {
     await query(
