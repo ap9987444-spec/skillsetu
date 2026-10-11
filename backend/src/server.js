@@ -258,7 +258,7 @@ app.put('/api/skills', requireAuth, async (req, res) => {
       { name }
     );
     await query(
-      "INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,FALSE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=EXCLUDED.level,verified=user_skills.verified,evidence=CASE WHEN user_skills.verified THEN user_skills.evidence ELSE EXCLUDED.evidence END",
+      "INSERT INTO user_skills(user_id,skill_id,level,verified,evidence) VALUES(@user_id,@skill_id,@level,FALSE,@evidence) ON CONFLICT (user_id,skill_id) DO UPDATE SET level=CASE WHEN user_skills.verified THEN GREATEST(user_skills.level,EXCLUDED.level) ELSE EXCLUDED.level END,verified=user_skills.verified,evidence=CASE WHEN user_skills.verified THEN user_skills.evidence ELSE EXCLUDED.evidence END",
       { user_id: userId, skill_id: skill.rows[0].id, level, evidence: 'Claimed by student — verification pending' }
     );
   }
