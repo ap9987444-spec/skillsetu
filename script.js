@@ -79,7 +79,11 @@ function renderSkillAnalytics() {
   const branchList = branchSkills[selectedBranch] || [];
   const chosen = branchList.filter(skill => currentSkills.has(skill));
   const displaySkills = [...chosen, ...branchList.filter(skill => !currentSkills.has(skill))].slice(0, 5);
-  const levelFor = skill => Math.max(0, Math.min(5, Number(skillLevels.get(skill) ?? (currentSkills.has(skill) ? 3 : 0))));
+  const levelFor = skill => {
+    const stored = Number(skillLevels.get(skill) || 0);
+    if (currentSkills.has(skill)) return Math.max(1, stored || 3);
+    return verifiedSkills.has(skill) ? Math.max(0, Math.min(5, stored)) : 0;
+  };
   if (rows) {
     rows.innerHTML = displaySkills.map(skill => {
       const level = levelFor(skill);
@@ -606,6 +610,7 @@ function setupSkillVerification() {
             method: "POST",
             body: JSON.stringify({ answers })
           });
+          result.querySelectorAll(".verification-outcome").forEach(node => node.remove());
           result.insertAdjacentHTML("beforeend",
             '<div class="verification-outcome ' + (checkedResult.passed ? "passed" : "failed") + '">' +
             (checkedResult.passed
@@ -613,7 +618,7 @@ function setupSkillVerification() {
               : "Not verified yet — " + checkedResult.correct + "/" + checkedResult.total + " correct. Review the topic and try again.") +
             '</div>');
           submit.textContent = checkedResult.passed ? "Assessment passed" : "Try again";
-          if (checkedResult.passed) submit.disabled = true;
+          submit.disabled = Boolean(checkedResult.passed);
           await loadSavedSkills();
           refreshSkillPicker();
           updateMatcher();
