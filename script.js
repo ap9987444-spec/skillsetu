@@ -56,7 +56,47 @@ const branchSkills = {
   "AI & Data Science": ["Python","SQL","Statistics","Pandas","Machine Learning","Deep Learning","Data Visualization","Git"]
 };
 
-const currentSkills = new Set(["JavaScript","SQL","React","Python","DSA","Git"]);
+const currentSkills = new Set((() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("skillsetu_skills_" + selectedBranch) || "null");
+    if (Array.isArray(saved)) return saved.filter(skill => (branchSkills[selectedBranch] || []).includes(skill));
+  } catch {}
+  return selectedBranch === "Computer Science" ? ["JavaScript","SQL","React","Python","DSA","Git"] : [];
+})());
+
+function persistLocalSkills() {
+  localStorage.setItem("skillsetu_skills_" + selectedBranch, JSON.stringify([...currentSkills]));
+}
+
+const verificationSkillsByBranch = {
+  "Computer Science": ["JavaScript","Python","SQL","React","DSA","Git","APIs","Cloud"],
+  "Information Technology": ["Python","SQL","Networks","Linux","Cloud","Git","APIs","Cybersecurity"],
+  "Electronics & Communication": ["C","Digital Electronics","Microcontrollers","Embedded","IoT"],
+  "Mechanical Engineering": ["CAD","Thermodynamics","Manufacturing"],
+  "Electrical Engineering": ["Circuit Theory","Power Systems","Power Electronics","PLC","Control Systems"],
+  "Civil Engineering": ["Surveying","Structural Analysis","RCC","Estimation"],
+  "AI & Data Science": ["Python","SQL","Statistics","Pandas","Machine Learning","Data Visualization"]
+};
+
+function refreshVerificationSkills() {
+  const select = document.getElementById("verificationSkill");
+  if (!select) return;
+  const previous = select.value;
+  const skills = verificationSkillsByBranch[selectedBranch] || [];
+  select.innerHTML = '<option value="">Choose a skill to verify</option>' +
+    skills.map(skill => '<option value="' + skill + '">' + skill + '</option>').join("");
+  if (skills.includes(previous)) select.value = previous;
+}
+
+function restoreLocalSkillsForBranch() {
+  currentSkills.clear();
+  try {
+    const saved = JSON.parse(localStorage.getItem("skillsetu_skills_" + selectedBranch) || "null");
+    if (Array.isArray(saved)) saved.filter(skill => (branchSkills[selectedBranch] || []).includes(skill)).forEach(skill => currentSkills.add(skill));
+    else if (selectedBranch === "Computer Science") ["JavaScript","SQL","React","Python","DSA","Git"].forEach(skill => currentSkills.add(skill));
+  } catch {}
+  persistLocalSkills();
+}
 
 const skillAliases = {
   DSA:["DSA","Data Structures","Algorithms"],
@@ -122,6 +162,7 @@ function refreshSkillPicker() {
     button.textContent = skill;
     button.addEventListener("click", () => {
       currentSkills.has(skill) ? currentSkills.delete(skill) : currentSkills.add(skill);
+      persistLocalSkills();
       button.classList.toggle("selected", currentSkills.has(skill));
       syncSelectedSkills();
       updateMatcher();
@@ -140,17 +181,27 @@ function updateMatcher() {
     return;
   }
 
-  const ranked = opportunities.map(job => ({ ...job, score: calculateMatch(job), skills: getJobSkills(job) }))
-    .sort((a, b) => b.score - a.score);
+  const ranked = opportunities.map(job => {
+    const skills = getJobSkills(job);
+    const matched = skills.filter(skillMatches);
+    const missing = skills.filter(skill => !skillMatches(skill));
+    return { ...job, score: calculateMatch(job), skills, matched, missing };
+  }).sort((a, b) => b.score - a.score || b.matched.length - a.matched.length);
   const top = ranked[0];
-  const matched = top.skills.filter(skillMatches);
-  const missing = top.skills.filter(skill => !skillMatches(skill));
+  const total = top.skills.length;
+  const matched = top.matched;
+  const missing = top.missing;
+  const nextSkill = missing[0];
+  const scoreLabel = currentSkills.size ? top.score + "%" : "Add skills";
 
   result.innerHTML = `
-    <div class="matcher-score"><div><span>BEST BRANCH MATCH</span><strong>${top.score}%</strong></div><span>${top.title}</span></div>
-    <div class="match-next"><strong>Matched skills:</strong> ${matched.length ? matched.join(" · ") : "Add a branch skill"}</div>
-    <div class="gap-chips">${(missing.length ? missing : ["No immediate gap"]).map(skill => `<span class="gap-chip">${missing.length ? "Missing: " : ""}${skill}</span>`).join("")}</div>
-    <div class="match-next"><strong>Next step:</strong> ${missing.length ? "Build " + missing[0] + "." : "Keep strengthening your core skills."}</div>`;
+    <div class="matcher-score"><div><span>BEST MATCH · ${selectedBranch}</span><strong>${scoreLabel}</strong></div><span>${top.title}</span></div>
+    <div class="match-progress" role="progressbar" aria-label="Opportunity skill match" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${currentSkills.size ? top.score : 0}"><i style="width:${currentSkills.size ? top.score : 0}%"></i></div>
+    <div class="match-breakdown"><span><b>${matched.length}</b> of ${total} required skills matched</span><span>${missing.length} skill gap${missing.length === 1 ? "" : "s"}</span></div>
+    <div class="match-next"><strong>Skills you selected:</strong> ${matched.length ? matched.join(" · ") : "Select the skills you can currently use."}</div>
+    <div class="gap-chips">${(missing.length ? missing.slice(0, 4) : ["No immediate gaps"]).map(skill => `<span class="gap-chip ${missing.length ? "gap-chip-missing" : "gap-chip-ready"}">${missing.length ? "Learn: " : ""}${skill}</span>`).join("")}</div>
+    <div class="match-next"><strong>Why recommended?</strong> This ${top.type === "placement" ? "placement" : "internship"} is ranked first because it has the strongest overlap with your selected skills.</div>
+    <div class="match-next"><strong>Next step:</strong> ${nextSkill ? "Practise " + nextSkill + " and verify it with a knowledge check." : "Keep your skills current and strengthen them with a project."}</div>`;
 }
 
 function renderOpportunities() {
@@ -448,9 +499,13 @@ async function loadSavedSkills() {
   if (!authToken || !currentUser) return;
   try {
     const data = await api("/skills");
+    const allowed = new Set(branchSkills[selectedBranch] || []);
     currentSkills.clear();
-    (data.skills || []).filter(s => Number(s.level) > 0).forEach(s => currentSkills.add(s.name));
+    (data.skills || []).filter(s => Number(s.level) > 0 && allowed.has(s.name)).forEach(s => currentSkills.add(s.name));
+    persistLocalSkills();
     refreshSkillPicker();
+    refreshVerificationSkills();
+    updateMatcher();
   } catch {}
 }
 
@@ -459,6 +514,7 @@ function setupSkillVerification() {
   const startBtn = document.getElementById("startVerificationBtn");
   const result = document.getElementById("verificationResult");
   if (!skillSelect || !startBtn || !result) return;
+  refreshVerificationSkills();
 
   startBtn.addEventListener("click", async () => {
     if (!authToken || !currentUser) {
@@ -475,7 +531,7 @@ function setupSkillVerification() {
     startBtn.textContent = "Loading…";
     try {
       const data = await api("/skill-verification/" + encodeURIComponent(skill));
-      result.innerHTML = '<div class="verification-quiz"><h3>Knowledge check: ' + data.skill + '</h3>' +
+      result.innerHTML = '<div class="verification-quiz"><div class="verification-quiz-head"><h3>Knowledge check: ' + data.skill + '</h3><p>' + data.questions.length + ' questions · Answer every question to receive your result.</p></div>' +
         data.questions.map((q, i) => '<fieldset><legend>' + (i + 1) + '. ' + q.q + '</legend>' +
           q.options.map((option, j) => '<label><input type="radio" name="verify-' + i + '" value="' + j + '"> ' + option + '</label>').join('') +
         '</fieldset>').join('') +
@@ -500,11 +556,14 @@ function setupSkillVerification() {
           result.insertAdjacentHTML("beforeend",
             '<div class="verification-outcome ' + (checkedResult.passed ? "passed" : "failed") + '">' +
             (checkedResult.passed
-              ? "✓ Skill verified — " + checkedResult.correct + "/" + checkedResult.total + " correct."
-              : "Verification not passed — " + checkedResult.correct + "/" + checkedResult.total + ". You can try again after studying.") +
-            '</div>'
-          );
+              ? "Skill verified — " + checkedResult.correct + "/" + checkedResult.total + " correct. Your verified status has been saved to your profile."
+              : "Not verified yet — " + checkedResult.correct + "/" + checkedResult.total + " correct. Review the topic and try again.") +
+            '</div>');
+          submit.textContent = checkedResult.passed ? "Assessment passed" : "Try again";
+          if (checkedResult.passed) submit.disabled = true;
           await loadSavedSkills();
+          refreshSkillPicker();
+          updateMatcher();
         } catch (error) {
           showToast(error.message);
           submit.disabled = false;
@@ -726,7 +785,10 @@ async function changeBranch(branch) {
   if (!branchSkills[branch]) return;
   selectedBranch = branch;
   localStorage.setItem("skillsetu_branch", selectedBranch);
+  restoreLocalSkillsForBranch();
   refreshSkillPicker();
+  refreshVerificationSkills();
+  updateMatcher();
   updateBranchUI();
 
   const select = document.getElementById("careerSelect");
@@ -740,6 +802,11 @@ async function changeBranch(branch) {
     }
   }
 
+  if (authToken && currentUser) await loadSavedSkills();
+  else {
+    refreshSkillPicker();
+    updateMatcher();
+  }
   await Promise.all([loadStudyUnits(), loadOpportunities()]);
 }
 
@@ -790,6 +857,7 @@ async function restoreSession() {
   setupResume();
   setupProfileEditor();
   await loadSavedSkills();
+  refreshVerificationSkills();
   await loadStudyUnits();
   await loadOpportunities();
   await loadApplications();
