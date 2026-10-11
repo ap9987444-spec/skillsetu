@@ -184,3 +184,20 @@ button:active{transform:translateY(1px)}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* Skill intelligence upgrade: clearer match scoring and assessment feedback */
+.match-progress{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:10px 0 7px}
+.match-progress i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .25s ease}
+.match-breakdown{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:9px;margin:8px 0}
+.match-breakdown b{color:var(--ink);font-size:11px}
+.gap-chip-missing{background:var(--orange-soft);color:var(--orange)}
+.gap-chip-ready{background:var(--green-soft);color:var(--green)}
+.verification-quiz-head p{font-size:10px;color:var(--muted);margin:5px 0 0}
+.verification-quiz fieldset{min-width:0}
+.verification-quiz label{line-height:1.5;color:var(--ink)}
+.verification-quiz input{accent-color:var(--blue)}
+.verification-quiz label:has(input:checked){color:var(--blue);font-weight:700}
+.dark .match-progress{background:#30272a}
+.dark .gap-chip-missing{background:#3b2b1a;color:#ffc17a}
+.dark .gap-chip-ready{background:#18382c;color:#9ad7bd}
