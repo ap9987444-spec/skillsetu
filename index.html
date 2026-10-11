@@ -168,8 +168,8 @@
             </div>
             <div class="matcher-body">
               <div class="matcher-grid">
-                <div><span class="matcher-label">YOUR CURRENT SKILLS</span><div class="skill-picker" id="skillPicker"></div></div>
-                <div class="matcher-result" id="matcherResult"><div class="match-next">Select or clear skills to update your match.</div></div>
+                <div><span class="matcher-label">YOUR CURRENT SKILLS</span><div class="skill-picker" id="skillPicker" role="group" aria-label="Select your current skills"></div><p class="skill-picker-hint">Tap a skill to mark it as a current skill. Verification is tracked separately.</p></div>
+                <div class="matcher-result" id="matcherResult" aria-live="polite" aria-atomic="true"><div class="match-next">Select or clear skills to update your match.</div></div>
               </div>
               <div class="recommendation-note"><strong>How it works:</strong> SkillSetu compares your selected skills with the requirements of opportunities for your branch.</div>
             </div>
@@ -189,9 +189,9 @@
               </select>
               <button class="primary-btn" id="startVerificationBtn" type="button">Start verification</button>
             </div>
-            <div id="verificationResult" class="verification-result">Verified skills will be marked separately from self-declared skills.</div>
+            <div id="verificationResult" class="verification-result" aria-live="polite" aria-atomic="true">Verified skills will be marked separately from self-declared skills.</div>
           </section>
-          <section class="two-col"><div class="panel"><div class="panel-head"><div><h2>Your skill map</h2><p>Verified through coursework, quizzes and projects.</p></div></div><div class="skill-row"><span>JavaScript</span><div class="skillbar"><i style="width:82%"></i></div><b>4.1</b></div><div class="skill-row"><span>SQL</span><div class="skillbar"><i style="width:68%"></i></div><b>3.4</b></div><div class="skill-row"><span>React</span><div class="skillbar"><i style="width:62%"></i></div><b>3.1</b></div><div class="skill-row"><span>Python</span><div class="skillbar"><i style="width:56%"></i></div><b>2.8</b></div><div class="skill-row"><span>Cloud</span><div class="skillbar"><i style="width:18%"></i></div><b>0.9</b></div></div><div class="panel"><div class="panel-head"><div><h2>Demand vs readiness</h2><p>Where employer demand is ahead of your current level.</p></div></div><div class="mini-chart"><div><span>Cloud</span><i style="width:92%"></i><em>High</em></div><div><span>SQL</span><i style="width:72%"></i><em>High</em></div><div><span>AI / ML</span><i style="width:64%"></i><em>Growing</em></div><div><span>React</span><i style="width:50%"></i><em>Medium</em></div></div></div></section>
+          <section class="two-col"><div class="panel"><div class="panel-head"><div><h2>Your skill map</h2><p>Branch-specific readiness and verification status.</p></div></div><div id="skillMapRows"><div class="empty-state">Choose a branch to view its skill map.</div></div></div><div class="panel"><div class="panel-head"><div><h2>Demand vs readiness</h2><p>Compare saved skill levels with available demand metadata.</p></div></div><div id="demandReadinessChart" class="mini-chart"><div class="empty-state">Sign in to compare your saved skills with demand data.</div></div></div></section>
           <section class="panel visual-intelligence-panel">
             <div class="panel-head">
               <div><h2>Skill intelligence map</h2><p>Visual view of current capability, employer demand and the path to readiness.</p></div>
@@ -200,13 +200,7 @@
             <div class="visual-grid">
               <div class="visual-card">
                 <div class="visual-card-head"><strong>Skill strength</strong><span>0–5 level</span></div>
-                <div class="chart-bars">
-                  <div class="chart-item"><span>JavaScript</span><div><i style="width:82%"></i></div><b>4.1</b></div>
-                  <div class="chart-item"><span>SQL</span><div><i style="width:68%"></i></div><b>3.4</b></div>
-                  <div class="chart-item"><span>React</span><div><i style="width:62%"></i></div><b>3.1</b></div>
-                  <div class="chart-item"><span>Python</span><div><i style="width:56%"></i></div><b>2.8</b></div>
-                  <div class="chart-item"><span>Cloud</span><div><i style="width:18%"></i></div><b>0.9</b></div>
-                </div>
+                <div class="chart-bars" id="skillStrengthBars"><div class="empty-state">Skill strength updates from your selected branch and saved profile.</div></div>
               </div>
               <div class="visual-card">
                 <div class="visual-card-head"><strong>Career readiness flow</strong><span>Claim → Verify → Improve → Match</span></div>
